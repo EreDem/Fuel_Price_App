@@ -100,9 +100,10 @@ class MLP:
             layer.biases[...] = b
 
 # test mlp
-MLP = MLP(1, 1, 2, 4)
-X = np.array([[0], [1], [2], [3], [4]])
-Y = np.array([[0], [3], [6], [9], [12]])
-X_test = np.array([[15]])
-MLP.load_weights("trained_weights.npz")
-print(MLP.feed_forward(X_test))
+# MLP = MLP(1, 1, 2, 4)
+# X = np.array([[0], [1], [2], [3], [4]])
+# Y = np.array([[0], [3], [6], [9], [12]])
+# X_test = np.array([[15]])
+# MLP.train(X, Y, 10000)
+# MLP.save_weights("trained_weights.npz")
+# print(MLP.feed_forward(X_test))

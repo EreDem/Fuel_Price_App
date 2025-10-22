@@ -25,6 +25,7 @@ export default function Index() {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
+        width: "100%",
         // backgroundColor: "black"
       }}
     >
@@ -117,6 +118,16 @@ export default function Index() {
             )}
           />
         </ActionSheet>
+        <Pressable
+          onPress={() => {
+            fetch("http://localhost:8000/predict")
+              .then((res) => res.json())
+              .then((data) => console.log(data.prediction))
+              .catch(console.error);
+          }}
+        >
+          <Text>FETCH</Text>
+        </Pressable>
       </View>
     </View>
   );
