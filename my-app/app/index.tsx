@@ -15,20 +15,25 @@ export default function Index() {
   // Variables
   const fuel_stations = ["Aral", "Shell", "Jet", "PM", "BFT", "Total"];
   const fuel_types = ["Diesel", "E5", "E10"];
+  const time_frames = ["24 Stunden", "48 Stunden", "72 Stunden"];
 
-  const [selected_station, setSelectedStation] = useState("Select Station");
-  const [selected_fuel, setSelectedFuel] = useState("Select Fuel Type");
+  const [selected_station, setSelectedStation] = useState("Jet");
+  const [selected_fuel, setSelectedFuel] = useState("E5");
+  const [time_frame, setTimeFrame] = useState("48 Stunden");
 
   return (
     <View
       style={{
         flex: 1,
-        justifyContent: "center",
+        marginTop: 75,
         alignItems: "center",
-        width: "100%",
-        // backgroundColor: "black"
+        alignSelf: "center",
+        width: "90%",
       }}
     >
+      <Text style={{ marginBottom: 20, fontSize: 18, fontWeight: "bold" }}>
+        Wählen Sie eine Tankstelle, einen Kraftstofftyp und einen Zeitrahmen für die Vorhersage aus:
+      </Text>
       {/* container for dropdowns */}
       <View
         style={{
@@ -39,7 +44,17 @@ export default function Index() {
           gap: 50,
         }}
       >
-        <Pressable onPress={() => openDropdown("station_picker")}>
+        <Pressable
+          style={{
+            width: 70,
+            height: 30,
+            backgroundColor: "#ddd",
+            borderRadius: 5,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          onPress={() => openDropdown("station_picker")}
+        >
           <Text>{selected_station}</Text>
         </Pressable>
         <ActionSheet
@@ -79,7 +94,17 @@ export default function Index() {
           />
         </ActionSheet>
 
-        <Pressable onPress={() => openDropdown("fuel_picker")}>
+        <Pressable
+          style={{
+            width: 70,
+            height: 30,
+            backgroundColor: "#ddd",
+            borderRadius: 5,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          onPress={() => openDropdown("fuel_picker")}
+        >
           <Text>{selected_fuel}</Text>
         </Pressable>
         <ActionSheet
@@ -119,6 +144,62 @@ export default function Index() {
           />
         </ActionSheet>
         <Pressable
+          style={{
+            width: 90,
+            height: 30,
+            backgroundColor: "#ddd",
+            borderRadius: 5,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          onPress={() => openDropdown("timeframe_picker")}
+        >
+          <Text>{time_frame}</Text>
+        </Pressable>
+        <ActionSheet
+          id="timeframe_picker"
+          containerStyle={{
+            maxHeight: 360,
+            width: 320, // make the sheet narrower
+            alignSelf: "center",
+            borderTopLeftRadius: 12,
+            borderTopRightRadius: 12,
+            overflow: "hidden",
+          }}
+        >
+          <FlatList
+            data={time_frames.map((frame, index) => ({
+              id: index.toString(),
+              title: frame,
+            }))}
+            keyExtractor={(item) => item.id}
+            style={{ maxHeight: 320, backgroundColor: "white", width: "100%" }}
+            renderItem={({ item }) => (
+              <Pressable
+                onPress={() => {
+                  SheetManager.hide("timeframe_picker");
+                  setTimeFrame(item.title);
+                }}
+                style={{
+                  padding: 16,
+                  borderBottomWidth: 1,
+                  borderBottomColor: "#eee",
+                  backgroundColor: "white",
+                }}
+              >
+                <Text>{item.title}</Text>
+              </Pressable>
+            )}
+          />
+        </ActionSheet>
+      </View>
+      <View style={{ marginTop: 20 }}>
+        <Pressable
+          style={{
+            padding: 10,
+            backgroundColor: "#ddd",
+            borderRadius: 5,
+          }}
           onPress={() => {
             fetch("http://localhost:8000/predict")
               .then((res) => res.json())
@@ -126,9 +207,27 @@ export default function Index() {
               .catch(console.error);
           }}
         >
-          <Text>FETCH</Text>
+          <Text>Predict</Text>
         </Pressable>
       </View>
+      <View
+        style={{
+          marginTop: 20,
+          backgroundColor: "#ddd",
+          width: 300,
+          height: 300,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Text>Prediction Graph</Text>
+      </View>
+      <Text style={{ marginTop: 20 }}>
+        Beste Zeit zum Tanken in den nächsten {time_frame} ist:
+      </Text>
+      <Text style={{ fontSize: 24, fontWeight: "bold", marginTop: 10 }}>
+        14:30 Uhr - 15:00 Uhr
+      </Text>
     </View>
   );
 }
