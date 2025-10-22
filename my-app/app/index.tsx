@@ -201,9 +201,9 @@ export default function Index() {
             borderRadius: 5,
           }}
           onPress={() => {
-            fetch("http://localhost:8000/predict")
+            fetch("http://localhost:8000/predict?fuel_station=" + selected_station + "&fuel_type=" + selected_fuel + "&time_frame=" + time_frame)
               .then((res) => res.json())
-              .then((data) => console.log(data.prediction))
+              .then((data) => console.log(data))
               .catch(console.error);
           }}
         >
