@@ -1,11 +1,13 @@
+import { clock_icon, dropdown_icon, fuel_icon, fuel_pump_icon, predict_graph_icon } from "@/assets/svgs";
 import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text, TouchableOpacity, View } from "react-native";
 import ActionSheet, {
   FlatList,
   SheetManager,
 } from "react-native-actions-sheet";
 
 export default function Index() {
+
   // Functions
   // Open Dropdown Sheet
   const openDropdown = (id: string) => {
@@ -21,6 +23,22 @@ export default function Index() {
   const [selected_fuel, setSelectedFuel] = useState("E5");
   const [time_frame, setTimeFrame] = useState("48 Stunden");
 
+  // Styles
+  const button_style = {
+    height: 33,
+    backgroundColor: "#9ACBD0",
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
+    flexDirection: "row" as const,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  };
+
   return (
     <View
       style={{
@@ -28,35 +46,33 @@ export default function Index() {
         marginTop: 75,
         alignItems: "center",
         alignSelf: "center",
-        width: "90%",
+        width: "100%",
+        backgroundColor: "#EFEFEF"
       }}
     >
-      <Text style={{ marginBottom: 20, fontSize: 18, fontWeight: "bold" }}>
-        Wählen Sie eine Tankstelle, einen Kraftstofftyp und einen Zeitrahmen für die Vorhersage aus:
+      <Text style={{ marginBottom: 20, fontSize: 18, fontWeight: "bold", textAlign: "center" }}>
+        Wählen sie Tankstelle, Kraftstoff und Zeitrahmen aus
       </Text>
       {/* container for dropdowns */}
       <View
         style={{
           width: "80%",
           flexDirection: "row",
-          justifyContent: "center",
+          justifyContent: "space-between",
           alignItems: "center",
-          gap: 50,
         }}
       >
-        <Pressable
+        <TouchableOpacity
           style={{
-            width: 70,
-            height: 30,
-            backgroundColor: "#ddd",
-            borderRadius: 5,
-            alignItems: "center",
-            justifyContent: "center",
+            ...button_style,
+            width: 90,
           }}
           onPress={() => openDropdown("station_picker")}
         >
-          <Text>{selected_station}</Text>
-        </Pressable>
+          {fuel_pump_icon}
+          <Text style={{ fontSize: 16}}>{selected_station}</Text>
+          {dropdown_icon}
+        </TouchableOpacity>
         <ActionSheet
           id="station_picker"
           containerStyle={{
@@ -94,19 +110,17 @@ export default function Index() {
           />
         </ActionSheet>
 
-        <Pressable
+        <TouchableOpacity
           style={{
-            width: 70,
-            height: 30,
-            backgroundColor: "#ddd",
-            borderRadius: 5,
-            alignItems: "center",
-            justifyContent: "center",
+            ...button_style,
+            width: 90,
           }}
           onPress={() => openDropdown("fuel_picker")}
         >
-          <Text>{selected_fuel}</Text>
-        </Pressable>
+          {fuel_icon}
+          <Text style={{ fontSize: 16 }}>{selected_fuel}</Text>
+          {dropdown_icon}
+        </TouchableOpacity>
         <ActionSheet
           id="fuel_picker"
           containerStyle={{
@@ -143,19 +157,17 @@ export default function Index() {
             )}
           />
         </ActionSheet>
-        <Pressable
+        <TouchableOpacity
           style={{
-            width: 90,
-            height: 30,
-            backgroundColor: "#ddd",
-            borderRadius: 5,
-            alignItems: "center",
-            justifyContent: "center",
+            width: 140,
+            ...button_style,
           }}
           onPress={() => openDropdown("timeframe_picker")}
         >
-          <Text>{time_frame}</Text>
-        </Pressable>
+          {clock_icon}
+          <Text style={{ fontSize: 16 }}>{time_frame}</Text>
+          {dropdown_icon}
+        </TouchableOpacity>
         <ActionSheet
           id="timeframe_picker"
           containerStyle={{
@@ -194,11 +206,11 @@ export default function Index() {
         </ActionSheet>
       </View>
       <View style={{ marginTop: 20 }}>
-        <Pressable
+        <TouchableOpacity
           style={{
-            padding: 10,
-            backgroundColor: "#ddd",
-            borderRadius: 5,
+            ...button_style,
+            width: 100,
+            paddingHorizontal: 10,
           }}
           onPress={() => {
             fetch("http://localhost:8000/predict?fuel_station=" + selected_station + "&fuel_type=" + selected_fuel + "&time_frame=" + time_frame)
@@ -207,8 +219,9 @@ export default function Index() {
               .catch(console.error);
           }}
         >
-          <Text>Predict</Text>
-        </Pressable>
+          <Text style={{ fontSize: 16 }}>Predict</Text>
+          {predict_graph_icon}
+        </TouchableOpacity>
       </View>
       <View
         style={{
