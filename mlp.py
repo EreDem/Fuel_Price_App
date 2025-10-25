@@ -34,6 +34,17 @@ class MLP:
         self.output_layer = neuron_layer(hidden_size, output_size)
         self.layers.append(self.output_layer)
 
+    def get_params(self):
+        params = []
+        for layer in self.layers:
+            params.append((layer.weights.copy(), layer.biases.copy()))
+        return params
+    
+    def set_params(self, params):
+        for layer, (W, b) in zip(self.layers, params):
+            layer.weights[...] = W
+            layer.biases[...] = b
+
     def feed_forward(self, X):
         A = X
         for layer in self.layers:
@@ -74,10 +85,6 @@ class MLP:
             layer.weights -= learning_rate * dW
             layer.biases -= learning_rate * dB
 
-    def train(self, X, Y, iterations):
-        for i in range(iterations):
-            self.backward(X, Y)
-
  
     # safe and load weights in different file
     def save_weights(self, path: str):
@@ -98,6 +105,51 @@ class MLP:
             ), f"Shape mismatch at layer {i}: got {W.shape}/{b.shape}, expected {layer.weights.shape}/{layer.biases.shape}"
             layer.weights[...] = W
             layer.biases[...] = b
+
+
+class Trainer:
+    def __init__(self, model: MLP):
+        self.model = model
+
+    def train_on_batch(self, X_batch, Y_batch, ):
+            self.model.backward(X_batch, Y_batch)
+
+    def train(self, X, Y, X_val, Y_val, epochs, batch_size=32, patience=10):
+        no_improve_epochs = 0
+        best_loss = float('inf')
+        best_params = None
+
+        for epoch in range(epochs):
+            for i in range(0, len(X), batch_size):
+                # split data in batches
+                X_batch = X[i:i + batch_size]
+                Y_batch = Y[i:i + batch_size]
+                # train on batch
+                self.train_on_batch(X_batch, Y_batch)
+            ## validate after each epoch
+            # calculate validation loss
+            Y_val_pred = self.model.feed_forward(X_val)
+            val_loss = np.mean((Y_val_pred - Y_val) ** 2)
+
+            # early stopping check
+            if val_loss < best_loss - 1e-4:
+                best_loss = val_loss
+                no_improve_epochs = 0
+                # save best model weights
+                best_params = self.model.get_params()
+            else:
+                no_improve_epochs += 1
+
+            if no_improve_epochs >= patience:
+                self.model.set_params(best_params)
+                self.model.save_weights("best_model_weights.npz")
+
+                print(f"Early stopping at epoch {epoch + 1}")
+                break
+
+        # save best model weights in npz file
+        self.model.set_params(best_params)
+        self.model.save_weights("best_model_weights.npz")
 
 # test mlp
 # MLP = MLP(1, 1, 2, 4)
