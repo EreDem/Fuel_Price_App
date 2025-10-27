@@ -1,35 +1,45 @@
-import { location_icon, menu_icon } from "@/assets/svgs";
-import { Stack } from "expo-router";
-import { Text, TouchableOpacity } from 'react-native';
+import { Tabs } from "expo-router";
 import { SheetProvider } from "react-native-actions-sheet";
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 export default function RootLayout() {
   return (
-  <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <SheetProvider>
-        <Stack
+        <Tabs
           screenOptions={{
-        headerShown: true,
-        headerStyle: { backgroundColor: '#9ACBD0' },
-        headerTintColor: '#fff',
-        headerTitle: 'Fuel Price',
-        headerTitleAlign: 'center',
-        headerTitleStyle: { fontWeight: '600' },
-        headerRight: () => (
-          <TouchableOpacity onPress={() => { /* open modal / navigate */ }} style={{ marginRight: 12, flexDirection: 'row', alignItems: 'center' }}>
-            {location_icon}
-            <Text style={{ color: '#000' }}>Stadt</Text>
-          </TouchableOpacity>
-        ),
-        headerLeft: () => (
-          <TouchableOpacity onPress={() => { /* open menu / navigate */ }} style={{ marginLeft: 12 }}>
-            {menu_icon}
-          </TouchableOpacity>
-        ),
+            headerShown: true,
+            headerTitle: "GasSavy",
+            headerStyle: {
+              backgroundColor: "#FFFFFF",
+            },
+            headerTitleStyle: {
+              fontFamily: "Outfit",
+              fontSize: 18,
+              fontWeight: "600",
+              color: "#171A1FFF",
+            },
+            tabBarStyle: {
+              backgroundColor: "#FFFFFF",
+              height: 64,
+            },
+            tabBarActiveTintColor: "#C24100FF",
+            tabBarInactiveTintColor: "#888888",
           }}
-        />
-        {/* Sheets global hier mounten */}
+        >
+          <Tabs.Screen
+            name="home"
+            options={{
+              title: "Home",
+            }}
+          />
+          <Tabs.Screen
+            name="settings"
+            options={{
+              title: "Settings",
+            }}
+          />
+        </Tabs>
       </SheetProvider>
     </GestureHandlerRootView>
   );

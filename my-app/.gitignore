@@ -50,3 +50,5 @@ eslint.config.js
 
 # misc
 tsconfig.json
+**/*.csv
+training-data/**/*.csv

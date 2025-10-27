@@ -1,13 +1,9 @@
-import { clock_icon, dropdown_icon, fuel_icon, fuel_pump_icon, predict_graph_icon } from "@/assets/svgs";
+import { fuel_pump_icon, location_icon } from "@/assets/svgs";
 import { useState } from "react";
-import { Pressable, Text, TouchableOpacity, View } from "react-native";
-import ActionSheet, {
-  FlatList,
-  SheetManager,
-} from "react-native-actions-sheet";
+import { Text, TouchableOpacity, View } from "react-native";
+import { SheetManager } from "react-native-actions-sheet";
 
 export default function Index() {
-
   // Functions
   // Open Dropdown Sheet
   const openDropdown = (id: string) => {
@@ -40,207 +36,174 @@ export default function Index() {
   };
 
   return (
+    // main view
     <View
       style={{
-        flex: 1,
-        marginTop: 75,
-        alignItems: "center",
-        alignSelf: "center",
+        justifyContent: "center",
         width: "100%",
-        backgroundColor: "#EFEFEF"
+        height: "100%",
+        backgroundColor: "#FFFFFF",
       }}
     >
-      <Text style={{ marginBottom: 20, fontSize: 18, fontWeight: "bold", textAlign: "center" }}>
-        Wählen sie Tankstelle, Kraftstoff und Zeitrahmen aus
-      </Text>
-      {/* container for dropdowns */}
+      {/* Welcome text view */}
       <View
         style={{
-          width: "80%",
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
+          top: -25,
+          margin: "auto",
+          width: "90%",
+          padding: 16,
+          height: 128,
+          backgroundColor: "#FFF5F0FF",
+          borderTopLeftRadius: 0,
+          borderTopRightRadius: 0,
+          borderBottomRightRadius: 16,
+          borderBottomLeftRadius: 16,
+          shadowColor: "#171a1f",
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.12,
+          shadowRadius: 2,
         }}
       >
-        <TouchableOpacity
+        <View
           style={{
-            ...button_style,
-            width: 90,
+            justifyContent: "center",
+            alignContent: "center",
+            margin: "auto",
           }}
-          onPress={() => openDropdown("station_picker")}
+        >
+          <Text
+            style={{
+              top: 10,
+              left: 2,
+              fontFamily: "Outfit",
+              fontSize: 24,
+              lineHeight: 32,
+              fontWeight: "700",
+              color: "#19191FFF",
+            }}
+          >
+            Willkommen zu Gassavy
+          </Text>
+          <Text
+            style={{
+              marginTop: 15,
+              fontFamily: "Inter" /* Body */,
+              fontSize: 14,
+              left: 2,
+              lineHeight: 20,
+              fontWeight: "400",
+              color: "#19191FFF",
+            }}
+          >
+            Your trusted partner for predicting future gas prices. Select your
+            station and fuel type below.
+          </Text>
+        </View>
+      </View>
+      {/* View for fuel station selection */}
+      <View
+        style={{
+          top: -32,
+          width: "90%",
+          margin: "auto",
+          height: 338,
+          backgroundColor: "#FFFFFF",
+          borderRadius: 10,
+          shadowColor: "#171a1f",
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.12,
+          shadowRadius: 2,
+          elevation: 2,
+        }}
+      >
+        <View
+          style={{
+            position: "absolute",
+            top: 31,
+            left: 24,
+            flex: 1,
+            flexDirection: "row",
+            gap: 10,
+          }}
+        >
+          {location_icon}
+          <Text style={{ fontFamily: "Outfit", fontSize: 18, fontWeight: 600 }}>
+            Wählen sie eine Tankstelle aus
+          </Text>
+        </View>
+        <View style={{ margin: 24, marginTop: 70 }}>
+         
+        </View>
+      </View>
+
+      {/* view for fuel type selection */}
+      <View
+        style={{
+          top: -45,
+          width: "90%",
+          margin: "auto",
+          height: 142,
+          backgroundColor: "#FFFFFF",
+          borderRadius: 10,
+          shadowColor: "#171a1f",
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.12,
+          shadowRadius: 2,
+          elevation: 2,
+        }}
+      >
+        <View
+          style={{
+            position: "absolute",
+            top: 31,
+            left: 24,
+            flex: 1,
+            flexDirection: "row",
+            gap: 10,
+          }}
         >
           {fuel_pump_icon}
-          <Text style={{ fontSize: 16}}>{selected_station}</Text>
-          {dropdown_icon}
-        </TouchableOpacity>
-        <ActionSheet
-          id="station_picker"
-          containerStyle={{
-            maxHeight: 360,
-            width: 320, // make the sheet narrower
-            alignSelf: "center",
-            borderTopLeftRadius: 12,
-            borderTopRightRadius: 12,
-            overflow: "hidden",
-          }}
-        >
-          <FlatList
-            data={fuel_stations.map((station, index) => ({
-              id: index.toString(),
-              title: station,
-            }))}
-            keyExtractor={(item) => item.id}
-            style={{ maxHeight: 320, backgroundColor: "white", width: "100%" }}
-            renderItem={({ item }) => (
-              <Pressable
-                onPress={() => {
-                  SheetManager.hide("station_picker");
-                  setSelectedStation(item.title);
-                }}
-                style={{
-                  padding: 16,
-                  borderBottomWidth: 1,
-                  borderBottomColor: "#eee",
-                  backgroundColor: "white",
-                }}
-              >
-                <Text>{item.title}</Text>
-              </Pressable>
-            )}
-          />
-        </ActionSheet>
+          <Text style={{ fontFamily: "Outfit", fontSize: 18, fontWeight: 600 }}>
+            Wählen sie eine Tankstelle aus
+          </Text>
+        </View>
+      </View>
 
-        <TouchableOpacity
-          style={{
-            ...button_style,
-            width: 90,
-          }}
-          onPress={() => openDropdown("fuel_picker")}
-        >
-          {fuel_icon}
-          <Text style={{ fontSize: 16 }}>{selected_fuel}</Text>
-          {dropdown_icon}
-        </TouchableOpacity>
-        <ActionSheet
-          id="fuel_picker"
-          containerStyle={{
-            maxHeight: 360,
-            width: 320, // make the sheet narrower
-            alignSelf: "center",
-            borderTopLeftRadius: 12,
-            borderTopRightRadius: 12,
-            overflow: "hidden",
-          }}
-        >
-          <FlatList
-            data={fuel_types.map((fuel, index) => ({
-              id: index.toString(),
-              title: fuel,
-            }))}
-            keyExtractor={(item) => item.id}
-            style={{ maxHeight: 320, backgroundColor: "white", width: "100%" }}
-            renderItem={({ item }) => (
-              <Pressable
-                onPress={() => {
-                  SheetManager.hide("fuel_picker");
-                  setSelectedFuel(item.title);
-                }}
-                style={{
-                  padding: 16,
-                  borderBottomWidth: 1,
-                  borderBottomColor: "#eee",
-                  backgroundColor: "white",
-                }}
-              >
-                <Text>{item.title}</Text>
-              </Pressable>
-            )}
-          />
-        </ActionSheet>
-        <TouchableOpacity
-          style={{
-            width: 140,
-            ...button_style,
-          }}
-          onPress={() => openDropdown("timeframe_picker")}
-        >
-          {clock_icon}
-          <Text style={{ fontSize: 16 }}>{time_frame}</Text>
-          {dropdown_icon}
-        </TouchableOpacity>
-        <ActionSheet
-          id="timeframe_picker"
-          containerStyle={{
-            maxHeight: 360,
-            width: 320, // make the sheet narrower
-            alignSelf: "center",
-            borderTopLeftRadius: 12,
-            borderTopRightRadius: 12,
-            overflow: "hidden",
-          }}
-        >
-          <FlatList
-            data={time_frames.map((frame, index) => ({
-              id: index.toString(),
-              title: frame,
-            }))}
-            keyExtractor={(item) => item.id}
-            style={{ maxHeight: 320, backgroundColor: "white", width: "100%" }}
-            renderItem={({ item }) => (
-              <Pressable
-                onPress={() => {
-                  SheetManager.hide("timeframe_picker");
-                  setTimeFrame(item.title);
-                }}
-                style={{
-                  padding: 16,
-                  borderBottomWidth: 1,
-                  borderBottomColor: "#eee",
-                  backgroundColor: "white",
-                }}
-              >
-                <Text>{item.title}</Text>
-              </Pressable>
-            )}
-          />
-        </ActionSheet>
-      </View>
-      <View style={{ marginTop: 20 }}>
-        <TouchableOpacity
-          style={{
-            ...button_style,
-            width: 100,
-            paddingHorizontal: 10,
-          }}
-          onPress={() => {
-            fetch("http://localhost:8000/predict?fuel_station=" + selected_station + "&fuel_type=" + selected_fuel + "&time_frame=" + time_frame)
-              .then((res) => res.json())
-              .then((data) => console.log(data))
-              .catch(console.error);
-          }}
-        >
-          <Text style={{ fontSize: 16 }}>Predict</Text>
-          {predict_graph_icon}
-        </TouchableOpacity>
-      </View>
-      <View
+      {/* button for prediction */}
+      <TouchableOpacity
         style={{
-          marginTop: 20,
-          backgroundColor: "#ddd",
-          width: 300,
-          height: 300,
+          top: -33,
+          margin: "auto",
+          width: "90%",
+          height: 48,
+          padding: 12,
           alignItems: "center",
           justifyContent: "center",
+          backgroundColor: "#C24100",
+          borderRadius: 6,
+          shadowColor: "#171a1f",
+          shadowOffset: {
+            width: 0,
+            height: 0,
+          },
+          shadowOpacity: 0.12,
+          shadowRadius: 2,
+          elevation: 2,
         }}
+        disabled={false} // Handle disabled state
       >
-        <Text>Prediction Graph</Text>
-      </View>
-      <Text style={{ marginTop: 20 }}>
-        Beste Zeit zum Tanken in den nächsten {time_frame} ist:
-      </Text>
-      <Text style={{ fontSize: 24, fontWeight: "bold", marginTop: 10 }}>
-        14:30 Uhr - 15:00 Uhr
-      </Text>
+        <Text
+          style={{
+            fontFamily: "Inter",
+            fontSize: 16,
+            lineHeight: 26,
+            fontWeight: "600",
+            color: "#FFFFFF",
+          }}
+        >
+          Predict Price
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
