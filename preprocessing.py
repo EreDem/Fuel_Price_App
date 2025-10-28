@@ -3,22 +3,21 @@ from mlp import MLP
 from mlp import Trainer
 import pandas as pd
 
-train_data_folder = "training_data"
-training_year_data_files = ["/2024", "/2025"]
-months = [
-    "/01",
-    "/02",
-    "/03",
-    "/04",
-    "/05",
-    "/06",
-    "/07",
-    "/08",
-    "/09",
-    "/10",
-    "/11",
-    "/12",
-]
+
+# normalize coordinate features and save scaler parameters
+coords = pd.read_csv(
+    "training_data/station_uuid_to_coordinates.csv", usecols=["latitude", "longitude"]
+)
+lat_mean, lat_std = coords["latitude"].mean(), coords["latitude"].std()
+lon_mean, lon_std = coords["longitude"].mean(), coords["longitude"].std()
+
+np.savez(
+    "geo_scaler.npz",
+    lat_mean=lat_mean,
+    lat_std=lat_std,
+    lon_mean=lon_mean,
+    lon_std=lon_std,
+)
 
 
 # get data chunk and preprocess
@@ -81,33 +80,36 @@ def get_data_chunk(year: str, month: str, day: str):
         file_path, usecols=["station_uuid"], dtype={"station_uuid": "string"}
     )
 
-    # convert uuids to coordinates
+    # Map UUIDs to coordinates
     coords = pd.read_csv(
         "training_data/station_uuid_to_coordinates.csv",
         usecols=["uuid", "latitude", "longitude"],
         dtype={"uuid": "string", "latitude": np.float32, "longitude": np.float32},
     )
 
+    # load geo scaler parameters
+    geo = np.load("geo_scaler.npz", allow_pickle=True)
+    LAT_MEAN, LAT_STD = float(geo["lat_mean"]), float(geo["lat_std"])
+    LON_MEAN, LON_STD = float(geo["lon_mean"]), float(geo["lon_std"])
+    LAT_STD = max(LAT_STD, 1e-8)
+    LON_STD = max(LON_STD, 1e-8)
+
+    # UUIDs -> Coords (left join)
     station_coords = station_ids.merge(
         coords, left_on="station_uuid", right_on="uuid", how="left"
     )[["latitude", "longitude"]]
 
-    ## handle missing coordinates by filling with mean values
-    lat_mean = station_coords["latitude"].mean(skipna=True)
-    lon_mean = station_coords["longitude"].mean(skipna=True)
+    # fill missing coords with mean values
+    station_coords["latitude"] = station_coords["latitude"].fillna(LAT_MEAN)
+    station_coords["longitude"] = station_coords["longitude"].fillna(LON_MEAN)
 
-    station_coords.fillna({"latitude": lat_mean, "longitude": lon_mean}, inplace=True)
-
+    # extract lat and lon as numpy arrays
     lat = station_coords["latitude"].to_numpy(dtype=np.float32)
     lon = station_coords["longitude"].to_numpy(dtype=np.float32)
 
-    # get mean and std for normalization
-    lat_mean, lat_std = lat.mean() or 1e-8, lat.std() or 1e-8
-    lon_mean, lon_std = lon.mean() or 1e-8, lon.std() or 1e-8
-
-    # normalize
-    lat = (lat - lat_mean) / lat_std
-    lon = (lon - lon_mean) / lon_std
+    # normalize lat and lon
+    lat = (lat - LAT_MEAN) / LAT_STD
+    lon = (lon - LON_MEAN) / LON_STD
 
     ## combine features
     X_e5 = np.column_stack([X_time, lat, lon])
@@ -148,17 +150,17 @@ X_val, Y_Val = None, None
 #     X_e5_Val, Y_e5_Val, X_e10_Val, Y_e10_Val, X_diesel_Val, Y_diesel_Val = (
 #         get_data_chunk("2025", "10", str(day).zfill(2))
 #     )
-#     X_val = np.concatenate([X_e5_Val], axis=0)
-#     Y_val = np.concatenate([Y_e5_Val], axis=0)
-# init models
-MLP_e5 = MLP(n_features=X_e5.shape[1], output_size=1, n_hidden=2, hidden_size=16)
-trainer = Trainer(MLP_e5)
+#     X_val = np.concatenate([X_diesel_Val], axis=0)
+#     Y_val = np.concatenate([Y_diesel_Val], axis=0)
+# init models and trainers
+MLP_diesel = MLP(n_features=X_e5.shape[1], output_size=1, n_hidden=2, hidden_size=16)
+trainer = Trainer(MLP_diesel)
 
-# MLP_e5.load_weights("best_model_weights.npz")
-# print(MLP_e5.feed_forward(X_e5[:1]))
+# MLP_diesel.load_weights("best_model_weights.npz")
+# print(MLP_diesel.feed_forward(X_e5[:1]))
 # print(Y_e5[:1])
 
-# for i in range(3):
+# for i in range(2):  # number of training runs
 #     for year in range(2024, 2025 + 1):
 #         for month in range(1, 12 + 1):
 #             for day in range(1, 31 + 1):
@@ -183,25 +185,25 @@ trainer = Trainer(MLP_e5)
 #                     )
 #                     continue
 
-#                 if X_e5 is None or Y_e5 is None:
+#                 if X_diesel is None or Y_diesel is None:
 #                     print(
 #                         f"Skipping day {year}-{str(month).zfill(2)}-{str(day).zfill(2)}"
 #                     )
 #                     continue
 
 #                 # check for NaN or Inf values
-#                 if not np.isfinite(X_e5).all() or not np.isfinite(Y_e5).all():
+#                 if not np.isfinite(X_diesel).all() or not np.isfinite(Y_diesel).all():
 #                     print(
 #                         "⚠️  Invalid value (NaN/Inf) in Batch. Skip this day.",
-#                         f"X_bad={~np.isfinite(X_e5).sum()}",
-#                         f"Y_bad={~np.isfinite(Y_e5).sum()}",
+#                         f"X_bad={~np.isfinite(X_diesel).sum()}",
+#                         f"Y_bad={~np.isfinite(Y_diesel).sum()}",
 #                     )
 #                     continue
 #                 trainer.train(
-#                     X_e5,
-#                     Y_e5,
-#                     X_e5_Val,
-#                     Y_e5_Val,
+#                     X_diesel,
+#                     Y_diesel,
+#                     X_val,
+#                     Y_val,
 #                     epochs=3,
 #                     batch_size=512,
 #                     patience=1,
@@ -209,14 +211,14 @@ trainer = Trainer(MLP_e5)
 
 # test after training
 print("Testing after training:")
-MLP_e5.load_weights("best_model_weights_e5.npz")
+MLP_diesel.load_weights("best_model_weights_diesel.npz")
 for day in range(15, 25 + 1):
     print(f"Testing on day {day}.")
     X_e5, Y_e5, X_e10, Y_e10, X_diesel, Y_diesel = get_data_chunk(
         "2025", "10", str(day).zfill(2)
     )
-    MLP_e5_predictions = MLP_e5.feed_forward(X_e5)
-    test_loss = np.mean((MLP_e5_predictions - Y_e5) ** 2)
+    MLP_diesel_predictions = MLP_diesel.feed_forward(X_diesel)
+    test_loss = np.mean((MLP_diesel_predictions - Y_diesel) ** 2)
     print(f"Test Loss on day {day}: {test_loss:.6f}")
 
 # def __init__(self, n_features, output_size, n_hidden, hidden_size):

@@ -163,14 +163,14 @@ class Trainer:
 
             if no_improve_epochs >= patience:
                 self.model.set_params(best_params)
-                self.model.save_weights("best_model_weights_e5.npz")
+                self.model.save_weights("best_model_weights_diesel.npz")
 
                 print(f"Early stopping at epoch {epoch + 1}")
                 break
 
         # save best model weights in npz file
         self.model.set_params(best_params)
-        self.model.save_weights("best_model_weights_e5.npz")
+        self.model.save_weights("best_model_weights_diesel.npz")
 
 
 # test mlp
