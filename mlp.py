@@ -1,8 +1,10 @@
 import numpy as np
 
+
 # Class for single layer of neurons
 class neuron_layer:
-    def __init__(self, n_features, n_neurons):
+    def __init__(self, n_features, n_neurons, leaky=True):
+        self.leaky = leaky
         # use he normal initialization to avoid a dead network
         self.weights = np.random.randn(n_features, n_neurons) * np.sqrt(
             2.0 / n_features
@@ -24,6 +26,9 @@ class MLP:
     def __init__(self, n_features, output_size, n_hidden, hidden_size):
         # create all layers and safe in list
         self.layers = []
+        self.train_loss = 0
+        # L2 regularization
+        self.l2_lambda = 0.001
 
         self.input_layer = neuron_layer(n_features, hidden_size)
         self.layers.append(self.input_layer)
@@ -31,7 +36,7 @@ class MLP:
         for i in range(n_hidden):
             self.layers.append(neuron_layer(hidden_size, hidden_size))
 
-        self.output_layer = neuron_layer(hidden_size, output_size)
+        self.output_layer = neuron_layer(hidden_size, output_size, False)
         self.layers.append(self.output_layer)
 
     def get_params(self):
@@ -39,7 +44,7 @@ class MLP:
         for layer in self.layers:
             params.append((layer.weights.copy(), layer.biases.copy()))
         return params
-    
+
     def set_params(self, params):
         for layer, (W, b) in zip(self.layers, params):
             layer.weights[...] = W
@@ -58,6 +63,7 @@ class MLP:
         # determine prediction and error
         Y_pred = self.feed_forward(X)
         error = Y_pred - Y
+        self.train_loss = np.mean(error**2)
 
         # get number of samples to normalize
         m = X.shape[0]
@@ -85,7 +91,9 @@ class MLP:
             layer.weights -= learning_rate * dW
             layer.biases -= learning_rate * dB
 
- 
+            # L2 regularization
+            layer.weights -= learning_rate * self.l2_lambda * layer.weights
+
     # safe and load weights in different file
     def save_weights(self, path: str):
         arrays = {}
@@ -111,25 +119,35 @@ class Trainer:
     def __init__(self, model: MLP):
         self.model = model
 
-    def train_on_batch(self, X_batch, Y_batch, ):
-            self.model.backward(X_batch, Y_batch)
+    def train_on_batch(
+        self,
+        X_batch,
+        Y_batch,
+    ):
+        self.model.backward(X_batch, Y_batch)
 
-    def train(self, X, Y, X_val, Y_val, epochs, batch_size=32, patience=10):
+    def train(self, X, Y, X_val, Y_val, epochs, batch_size=512, patience=10):
         no_improve_epochs = 0
-        best_loss = float('inf')
+        best_loss = float("inf")
         best_params = None
 
         for epoch in range(epochs):
             for i in range(0, len(X), batch_size):
                 # split data in batches
-                X_batch = X[i:i + batch_size]
-                Y_batch = Y[i:i + batch_size]
+                X_batch = X[i : i + batch_size]
+                Y_batch = Y[i : i + batch_size]
                 # train on batch
                 self.train_on_batch(X_batch, Y_batch)
             ## validate after each epoch
             # calculate validation loss
             Y_val_pred = self.model.feed_forward(X_val)
             val_loss = np.mean((Y_val_pred - Y_val) ** 2)
+            if np.isnan(val_loss):
+                val_loss = np.inf
+
+            print(
+                f"Epoch {epoch + 1}/{epochs}, Train Error: {self.model.train_loss} Validation Loss: {val_loss:.6f}, no_improve_epochs: {no_improve_epochs}"
+            )
 
             # early stopping check
             if val_loss < best_loss - 1e-4:
@@ -140,16 +158,20 @@ class Trainer:
             else:
                 no_improve_epochs += 1
 
+            if best_params is None:
+                best_params = self.model.get_params()
+
             if no_improve_epochs >= patience:
                 self.model.set_params(best_params)
-                self.model.save_weights("best_model_weights.npz")
+                self.model.save_weights("best_model_weights_e5.npz")
 
                 print(f"Early stopping at epoch {epoch + 1}")
                 break
 
         # save best model weights in npz file
         self.model.set_params(best_params)
-        self.model.save_weights("best_model_weights.npz")
+        self.model.save_weights("best_model_weights_e5.npz")
+
 
 # test mlp
 # MLP = MLP(1, 1, 2, 4)
