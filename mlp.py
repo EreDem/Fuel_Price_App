@@ -1,5 +1,7 @@
 import numpy as np
 
+from preprocessing import get_data_chunk
+
 
 # Class for single layer of neurons
 class neuron_layer:
@@ -28,7 +30,7 @@ class MLP:
         self.layers = []
         self.train_loss = 0
         # L2 regularization
-        self.l2_lambda = 0.001
+        self.l2_lambda = 1e-4
 
         self.input_layer = neuron_layer(n_features, hidden_size)
         self.layers.append(self.input_layer)
@@ -86,7 +88,7 @@ class MLP:
                     self.layers[l - 1].Z
                 )
 
-            learning_rate = 0.01
+            learning_rate = 1e-3
             # update weights
             layer.weights -= learning_rate * dW
             layer.biases -= learning_rate * dB
@@ -119,25 +121,116 @@ class Trainer:
     def __init__(self, model: MLP):
         self.model = model
 
-    def train_on_batch(
+    def train_on_data(
         self,
-        X_batch,
-        Y_batch,
+        batch_size: int = 512,
+        training_on: str = "e5",
+        epoch: int = 0,
     ):
-        self.model.backward(X_batch, Y_batch)
+        for year in range(2024, 2025 + 1):
+            for month in range(1, 12 + 1):
+                for day in range(1, 31 + 1):
+                    # skip dates  with time changes
+                    if str(month).zfill(2) == "03" and (
+                        str(day).zfill(2) == "31" or str(day).zfill(2) == "30"
+                    ):
+                        continue
 
-    def train(self, X, Y, X_val, Y_val, epochs, batch_size=512, patience=10):
+                    print(
+                        f"Training on day {year}-{str(month).zfill(2)}-{str(day).zfill(2)} in {epoch}."
+                    )
+
+                    # get data chunk
+                    try:
+                        X_e5, Y_e5, X_e10, Y_e10, X_diesel, Y_diesel = get_data_chunk(
+                            str(year), str(month).zfill(2), str(day).zfill(2)
+                        )
+                        fuel_map = {
+                            "e5": (X_e5, Y_e5),
+                            "e10": (X_e10, Y_e10),
+                            "diesel": (X_diesel, Y_diesel),
+                        }
+                        X = fuel_map[training_on][0]
+                        Y = fuel_map[training_on][1]
+                    except FileNotFoundError as e:
+                        print(
+                            f"Error loading data for day {year}-{str(month).zfill(2)}-{str(day).zfill(2)}: {e}"
+                        )
+                        continue
+
+                    if X is None or Y is None:
+                        print(
+                            f"Skipping day {year}-{str(month).zfill(2)}-{str(day).zfill(2)}"
+                        )
+                        continue
+
+                    # check for NaN or Inf values
+                    if not np.isfinite(X).all() or not np.isfinite(Y).all():
+                        print(
+                            "⚠️  Invalid value (NaN/Inf) in Batch. Skip this day.",
+                            f"X_bad={~np.isfinite(X).sum()}",
+                            f"Y_bad={~np.isfinite(Y).sum()}",
+                        )
+                        continue
+                    for i in range(0, len(X), batch_size):
+                        # split data in batches
+                        X_batch = X[i : i + batch_size]
+                        Y_batch = Y[i : i + batch_size]
+                        # train on batch
+                        self.model.backward(X_batch, Y_batch)
+    
+    def generate_validation_set(self, training_on: str = "diesel"):
+        X_list = []
+        Y_list = []
+
+        for day in range(1, 14 + 1):
+            day_str = str(day).zfill(2)
+            print(f"Loading validation data for day 2025-10-{day_str}")
+            try:
+                (
+                    X_e5_Val,
+                    Y_e5_Val,
+                    X_e10_Val,
+                    Y_e10_Val,
+                    X_diesel_Val,
+                    Y_diesel_Val,
+                ) = get_data_chunk("2025", "10", day_str)
+            except FileNotFoundError:
+                continue
+
+            fuel_map = {
+                "e5": (X_e5_Val, Y_e5_Val),
+                "e10": (X_e10_Val, Y_e10_Val),
+                "diesel": (X_diesel_Val, Y_diesel_Val),
+            }
+            Xv, Yv = fuel_map[training_on]
+
+            if Xv is None or Yv is None:
+                continue
+
+            X_list.append(Xv)
+            Y_list.append(Yv)
+
+        if not X_list:
+            raise RuntimeError("No validation data loaded.")
+
+        X_val = np.concatenate(X_list, axis=0)
+        Y_val = np.concatenate(Y_list, axis=0)
+        return X_val, Y_val
+
+
+    def train(self, epochs = 10, training_on = "e5", batch_size=512, patience=10):
         no_improve_epochs = 0
         best_loss = float("inf")
         best_params = None
 
+        # get validation set
+        X_val, Y_val = self.generate_validation_set(training_on=training_on)
+
+        # training loop
         for epoch in range(epochs):
-            for i in range(0, len(X), batch_size):
-                # split data in batches
-                X_batch = X[i : i + batch_size]
-                Y_batch = Y[i : i + batch_size]
-                # train on batch
-                self.train_on_batch(X_batch, Y_batch)
+            # train on data
+            self.train_on_data(batch_size=batch_size, training_on=training_on, epoch=epoch)
             ## validate after each epoch
             # calculate validation loss
             Y_val_pred = self.model.feed_forward(X_val)
@@ -163,21 +256,13 @@ class Trainer:
 
             if no_improve_epochs >= patience:
                 self.model.set_params(best_params)
-                self.model.save_weights("best_model_weights_diesel.npz")
+                self.model.save_weights(f"best_model_weights_{training_on}.npz")
 
                 print(f"Early stopping at epoch {epoch + 1}")
                 break
 
         # save best model weights in npz file
         self.model.set_params(best_params)
-        self.model.save_weights("best_model_weights_diesel.npz")
+        self.model.save_weights(f"best_model_weights_{training_on}.npz")
 
 
-# test mlp
-# MLP = MLP(1, 1, 2, 4)
-# X = np.array([[0], [1], [2], [3], [4]])
-# Y = np.array([[0], [3], [6], [9], [12]])
-# X_test = np.array([[15]])
-# MLP.train(X, Y, 10000)
-# MLP.save_weights("trained_weights.npz")
-# print(MLP.feed_forward(X_test))
