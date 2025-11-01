@@ -3,10 +3,13 @@ import zoneinfo
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
+import yfinance as yf
 from mlp import MLP
 import numpy as np
 
 app = FastAPI()
+
+tk_api_key = "c39abee3-9692-0aef-edbf-d282b3fab396"
 
 # load the pre-trained model
 MLP_e5 = MLP(n_features=8, output_size=1, n_hidden=2, hidden_size=16)
@@ -66,6 +69,45 @@ def predict(fuel_type: str, station_uuid: str):
     norm_lat = (station_lat - LAT_MEAN) / LAT_STD
     norm_lon = (station_lon - LON_MEAN) / LON_STD
 
+    # get oil price for oil price features
+    # get Brent prices for the last 8 days
+    brent = yf.download("BZ=F", period="8d")["Close"].reset_index()
+    brent.columns = ["date", "brent_price"]
+
+    # create lag features
+    brent["oil_today"] = brent["brent_price"]
+    brent["oil_yesterday"] = brent["brent_price"].shift(1)
+    brent["oil_2days"] = brent["brent_price"].shift(2)
+    brent["oil_3days"] = brent["brent_price"].shift(3)
+    brent["oil_7days"] = brent["brent_price"].shift(7)
+
+    # combine oil features into a single vector 
+    oil_features = brent.iloc[-1][["oil_today", "oil_yesterday", "oil_2days", "oil_3days", "oil_7days"]].to_numpy(dtype=np.float32)
+    
+
+    # get exchange rate for exchange rate features
+    current_price = f"https://creativecommons.tankerkoenig.de/json/prices.php?ids={station_uuid}&apikey={tk_api_key}"
+    current_prices = {
+        "e5": current_price.json().get("prices", {}).get(station_uuid, {}).get("e5", 1.7),
+        "e10": current_price.json().get("prices", {}).get(station_uuid, {}).get("e10", 1.6),
+        "diesel": current_price.json().get("prices", {}).get(station_uuid, {}).get("diesel", 1.5)
+    }
+    
+    # get EUR/USD exchange rates for the last 8 days
+    eurusd = yf.download("EURUSD=X", period="8d")["Close"].reset_index()
+    eurusd.columns = ["date", "eur_usd_rate"]
+
+    # create lag features
+    eurusd["eur_usd_lag_1"] = eurusd["eur_usd_rate"].shift(1)
+    eurusd["eur_usd_lag_7"] = eurusd["eur_usd_rate"].shift(7)
+    eurusd["eur_usd_change_7d"] = eurusd["eur_usd_rate"].pct_change(7)
+
+    # combine exchange rate features into a single vector
+    eurusd_features = eurusd.iloc[-1][["eur_usd_lag_1", "eur_usd_lag_7", "eur_usd_change_7d"]].to_numpy(dtype=np.float32)
+
+    # get current price for e5/e10/diesel to fill in missing lag features (temporary workaround)
+    
+    current_price = current_prices.get(key, 1.5)
     # start time
     start_time = pd.Timestamp.now(tz=zoneinfo.ZoneInfo("Europe/Berlin"))
 
@@ -103,6 +145,11 @@ def predict(fuel_type: str, station_uuid: str):
                 day_of_year_cos,
                 norm_lat,
                 norm_lon,
+                *oil_features,
+                *eurusd_features,
+                current_prices[fuel_type],
+                current_prices[fuel_type], # fill missing lag features with current price
+                current_prices[fuel_type],
             ],
             dtype=np.float32,
         ).reshape(1, -1)
