@@ -1,3 +1,4 @@
+from datetime import date
 import zoneinfo
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,7 +19,7 @@ MODELS = {"e5": MLP_e5, "e10": MLP_e10, "diesel": MLP_diesel}
 
 # load geo scaling for geo features
 _coords_df = pd.read_csv(
-    "training_data/station_uuid_to_coordinates.csv",
+    "station_uuid_to_coordinates.csv",
     usecols=["uuid", "latitude", "longitude"],
     dtype={"uuid": "string", "latitude": np.float32, "longitude": np.float32},
 )
@@ -51,20 +52,74 @@ def read_root():
 
 # request for fuel price prediction
 @app.get("/predict")
-def predict(fuel_station: str, fuel_type: str, time_frame: str):
+def predict(fuel_type: str, station_uuid: str):
     # choose model
     key = fuel_type.strip().lower()
     model = MODELS.get(key)
     if model is None:
         raise HTTPException(status_code=400, detail=f"Unknown fuel type: {fuel_type}")
 
-    # Collect the predictions over the timeframe
-    price_predictions = []
-
     # geo features
+    station_lat, station_lon = COORD_MAP.get(station_uuid, (LAT_MEAN, LON_MEAN))
+
+    # normalize geo features
+    norm_lat = (station_lat - LAT_MEAN) / LAT_STD
+    norm_lon = (station_lon - LON_MEAN) / LON_STD
+
+    # start time
+    start_time = pd.Timestamp.now(tz=zoneinfo.ZoneInfo("Europe/Berlin"))
+
+    time_to_price = []
+
+    for t in range(144):  # next 72 hours in 30-min intervals
+        # build time features
+        current_time = start_time + pd.Timedelta(minutes=30 * t)
+
+        # Hour + Minute as decimal hour (e.g., 13.5 for 13:30)
+        hour = current_time.hour + current_time.minute / 60.0
+
+        # Weekday (0 = Monday, 6 = Sunday)
+        weekday = current_time.weekday()
+
+        # Day of year (1–365/366)
+        day_of_year = current_time.dayofyear
+
+        # cyclic features
+        hour_sin = np.sin(2 * np.pi * hour / 24)
+        hour_cos = np.cos(2 * np.pi * hour / 24)
+        weekday_sin = np.sin(2 * np.pi * weekday / 7)
+        weekday_cos = np.cos(2 * np.pi * weekday / 7)
+        day_of_year_sin = np.sin(2 * np.pi * day_of_year / 365)
+        day_of_year_cos = np.cos(2 * np.pi * day_of_year / 365)
+
+        # assemble feature vector
+        X_input = np.array(
+            [
+                hour_sin,
+                hour_cos,
+                weekday_sin,
+                weekday_cos,
+                day_of_year_sin,
+                day_of_year_cos,
+                norm_lat,
+                norm_lon,
+            ],
+            dtype=np.float32,
+        ).reshape(1, -1)
+
+        # predict price
+        price_pred = model.feed_forward(X_input)
+        price = float(price_pred)
+
+        decimal_time = (hour) % 24  # 0..24, bei 25 -> 1 usw.
+
+        time_to_price.append(
+            {
+                "time": round(decimal_time, 3),
+                "price": price,
+            }
+        )
 
     return {
-        "fuel_station": fuel_station,
-        "fuel_type": fuel_type,
-        "time_frame": time_frame,
+        "predictions": time_to_price
     }

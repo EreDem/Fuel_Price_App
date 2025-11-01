@@ -53,3 +53,4 @@ tsconfig.json
 **/*.csv
 training_data/**/*.csv
 training_data/
+.venv/
