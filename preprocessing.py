@@ -1,7 +1,8 @@
 import numpy as np
-from mlp import MLP
-from mlp import Trainer
+# from mlp import MLP
+# from mlp import Trainer
 import pandas as pd
+import os
 
 
 # normalize coordinate features and save scaler parameters
@@ -19,29 +20,81 @@ np.savez(
     lon_std=lon_std,
 )
 
-
-# get data chunk and preprocess
-def get_data_chunk(year: str, month: str, day: str):
+# We have to simulate the passing of time for the model to predict future prices
+# Therefore we create new rows with the same base features but with a price from
+# the future and a horizon feature indicating how far in the future the price is.
+# This function adds a horizon feature to the csv file for a given date.
+def add_horizon_to_csv(year: str, month: str, day: str):
     # load data from file
     file_path = f"training_data/{year}/{month}/{year}-{month}-{day}-prices.csv"
+    
+    # create temp directory for modified file
+    temp_file_path = f"training_data/{year}/{month}/{year}-{month}-{day}-prices-temp.csv"
+
+    # save data
+    data = pd.read_csv(file_path)
+
+    # write data into temp file
+
+
+def data_to_features(year: str, month: str, day: str):
+    # load data from file
+    # file_path = f"training_data/{year}/{month}/{year}-{month}-{day}-prices.csv"
+    file_path = f"training_example.csv"
 
     #### create features and labels
 
-    ## date features
+    ## brand one-hot features
+    data = pd.read_csv(file_path)
+    # sort by station and time
+    data = data.sort_values(["station_uuid", "date"]).reset_index(drop=True)
+
+    # map station_uuid to brand
+    station_info = pd.read_csv(
+        "stations.csv",   
+        usecols=["uuid", "brand"]
+    )
+
+    print(data.columns)
+
+    # merge brand into data
+    data = data.merge(station_info, left_on="station_uuid", right_on="uuid", how="left")
+
+    # missing brands to "Other"
+    data["brand"] = data["brand"].fillna("Other")
+
+    # fixed set of brands
+    all_brands = ["Aral", "Esso", "Jet", "Total", "Shell", "Other"]
+
+    # one-hot
+    brand_dummies = pd.get_dummies(data["brand"], prefix="brand")
+
+    # ensure all 6 columns exist
+    expected_cols = [f"brand_{b}" for b in all_brands]
+    brand_dummies = brand_dummies.reindex(columns=expected_cols, fill_value=0)
+
+    # back to data
+    data = pd.concat([data, brand_dummies], axis=1)
+
+    # combine brand one hot features
+    brand_features = data[[
+        "brand_Aral",
+        "brand_Esso",
+        "brand_Jet",
+        "brand_Total",
+        "brand_Shell",
+        "brand_Other"
+    ]].to_numpy(dtype=np.float32)
+
     # get first col (date col) of csv
-    date = pd.read_csv(file_path, usecols=["date"], parse_dates=[0])
+    date = pd.read_csv(
+        file_path, usecols=["date"], parse_dates=["date"]
+    )
+    
 
     # time is given with time zone, which we do not need
     date["date"] = pd.to_datetime(date["date"], errors="coerce")
     date["date"] = date["date"].dt.tz_localize(None)
-
-    # n_before = len(date)
-    # date.dropna(subset=["date"], inplace=True)
-    # if len(date) < n_before:
-    #     print(f"⚠️ {n_before - len(date)} ungültige Datumswerte entfernt")
-    # if len(date) == 0:
-    #     print(f"⚠️ Keine gültigen Daten am, wird übersprungen.")
-    #     return None, None, None, None, None, None
 
     ### extract time components
     # Hour + Minute as decimal hour (e.g., 13.5 for 13:30)
@@ -63,6 +116,10 @@ def get_data_chunk(year: str, month: str, day: str):
     date["day_of_year_sin"] = np.sin(2 * np.pi * day_of_year / 365)
     date["day_of_year_cos"] = np.cos(2 * np.pi * day_of_year / 365)
 
+    
+    isWeekend = (weekday == 5) | (weekday == 6)
+    date["is_weekend"] = isWeekend.astype(np.float32)
+
     ## summarize time features
     X_time = date[
         [
@@ -72,6 +129,7 @@ def get_data_chunk(year: str, month: str, day: str):
             "weekday_cos",
             "day_of_year_sin",
             "day_of_year_cos",
+            "is_weekend",
         ]
     ].to_numpy(dtype=np.float32)
 
@@ -111,10 +169,123 @@ def get_data_chunk(year: str, month: str, day: str):
     lat = (lat - LAT_MEAN) / LAT_STD
     lon = (lon - LON_MEAN) / LON_STD
 
+    ## raw oil price features
+    # load oil prices
+    oil_prices = pd.read_csv(
+        "oil_prices.csv",
+        usecols=["date", "brent_price"],
+        parse_dates=["date"],
+    )
+
+    # create lag features
+    oil_prices["oil_today"] = oil_prices["brent_price"]
+    oil_prices["oil_yesterday"] = oil_prices["brent_price"].shift(1)
+    oil_prices["oil_2days"] = oil_prices["brent_price"].shift(2)
+    oil_prices["oil_3days"] = oil_prices["brent_price"].shift(3)
+    oil_prices["oil_7days"] = oil_prices["brent_price"].shift(7)
+
+
+    # drop rows with NaN (first 7 days)
+    oil_prices = oil_prices.dropna().reset_index(drop=True)
+
+    # extract oil features for the given date
+    target_date = pd.Timestamp(f"{year}-{month}-{day}")
+
+    # try exact match
+    oil_row = oil_prices.loc[oil_prices["date"] == target_date]
+
+
+    # extract values (shape (1,5))
+    oil_vals = oil_row[
+        ["oil_today", "oil_yesterday", "oil_2days", "oil_3days", "oil_7days"]
+    ].to_numpy(dtype=np.float32).reshape(-1)
+
+    n = len(X_time)   
+
+    # Adjust shape
+    oil_today_vec     = np.full(n, oil_vals[0], dtype=np.float32)
+    oil_yesterday_vec = np.full(n, oil_vals[1], dtype=np.float32)
+    oil_2days_vec     = np.full(n, oil_vals[2], dtype=np.float32)
+    oil_3days_vec     = np.full(n, oil_vals[3], dtype=np.float32)
+    oil_7days_vec     = np.full(n, oil_vals[4], dtype=np.float32)
+
+    oil_features = np.column_stack([
+        oil_today_vec,
+        oil_yesterday_vec,
+        oil_2days_vec,
+        oil_3days_vec,
+        oil_7days_vec,
+    ])
+
+
+    ## exchange rate features
+    # load exchange rates
+    exchange_rates = pd.read_csv(
+        "exchange_rates.csv",
+        usecols=["date", "eur_usd_rate"],
+        parse_dates=["date"]
+    )
+
+    # drop rows with NaN (first 7 days)
+    exchange_rates = exchange_rates.dropna().reset_index(drop=True)
+
+    # create lag features
+    exchange_rates["eur_usd_lag_1"] = exchange_rates["eur_usd_rate"].shift(1)
+    exchange_rates["eur_usd_lag_7"] = exchange_rates["eur_usd_rate"].shift(7)
+    exchange_rates["eur_usd_change_7d"] = exchange_rates["eur_usd_rate"].pct_change(7)
+
+    # try exact match
+    exchange_rates_row = exchange_rates.loc[exchange_rates["date"] == target_date]
+
+    # extract values (shape (1,4))
+    exchange_vals = exchange_rates_row[["eur_usd_rate", "eur_usd_lag_1", "eur_usd_lag_7", "eur_usd_change_7d"]].to_numpy(dtype=np.float32).reshape(-1)
+
+    n = len(X_time)
+    # Adjust shape
+    eur_usd_rate_vec        = np.full(n, exchange_vals[0], dtype=np.float32)
+    eur_usd_lag_1_vec      = np.full(n, exchange_vals[1], dtype=np.float32)
+    eur_usd_lag_7_vec      = np.full(n, exchange_vals[2], dtype=np.float32)
+    eur_usd_change_7d_vec  = np.full(n, exchange_vals[3], dtype=np.float32)
+
+    # combine exchange rate features
+    exchange_rates = np.column_stack([
+        eur_usd_rate_vec,
+        eur_usd_lag_1_vec,
+        eur_usd_lag_7_vec,
+        eur_usd_change_7d_vec,
+    ])
+
+
+    ## create price lag features
+    # create last-price feature (previous entry for same station)
+    for fuel in ["diesel", "e5", "e10"]:
+        for lag in [1, 3, 10]:
+            data[f"{fuel}_lag_{lag}"] = data.groupby("station_uuid")[fuel].shift(lag)
+
+    lag_cols = [
+        "diesel_lag_1", "diesel_lag_3", "diesel_lag_10",
+        "e5_lag_1", "e5_lag_3", "e5_lag_10",
+        "e10_lag_1", "e10_lag_3", "e10_lag_10",
+    ]
+    # drop rows where last price is missing (first entry per station)
+    data = data.dropna(subset=lag_cols).reset_index(drop=True)
+
+    # extract last price features
+    X_last_diesel = data[["diesel_lag_1", "diesel_lag_3", "diesel_lag_10"]].to_numpy(dtype=np.float32)
+    X_last_e5 = data[["e5_lag_1", "e5_lag_3", "e5_lag_10"]].to_numpy(dtype=np.float32)
+    X_last_e10 = data[["e10_lag_1", "e10_lag_3", "e10_lag_10"]].to_numpy(dtype=np.float32)
+
+    # test data shapes before combining
+    print("X_time shape:", X_time.shape)
+    print("lat shape:", lat.shape)
+    print("lon shape:", lon.shape)
+    print("oil_prices shape:", oil_features.shape)
+    print("exchange_rates shape:", exchange_rates.shape)
+    print("brand_features shape:", brand_features.shape)
     ## combine features
-    X_e5 = np.column_stack([X_time, lat, lon])
-    X_e10 = np.column_stack([X_time, lat, lon])
-    X_diesel = np.column_stack([X_time, lat, lon])
+    X_e5 = np.column_stack([X_time, lat, lon, oil_features, exchange_rates, brand_features, X_last_e5])
+    X_e10 = np.column_stack([X_time, lat, lon, oil_features, exchange_rates, brand_features, X_last_e10])
+    X_diesel = np.column_stack([X_time, lat, lon, oil_features, exchange_rates, brand_features, X_last_diesel])
 
     ### make labels
     Y_e5 = pd.read_csv(file_path, usecols=["e5"]).to_numpy(dtype=np.float32)
@@ -137,88 +308,8 @@ def get_data_chunk(year: str, month: str, day: str):
     Y_diesel = Y_diesel[mask]
     Y_diesel = Y_diesel.reshape(-1, 1)
 
+
+
+
     return X_e5, Y_e5, X_e10, Y_e10, X_diesel, Y_diesel
 
-
-X_e5, Y_e5, X_e10, Y_e10, X_diesel, Y_diesel = get_data_chunk("2025", "09", "20")
-
-# test training on 10 days with 1 day validation
-# get validation data
-X_val, Y_Val = None, None
-# for day in range(1, 14 + 1):
-#     print(f"Loading validation data for day 2025-10-{str(day).zfill(2)}")
-#     X_e5_Val, Y_e5_Val, X_e10_Val, Y_e10_Val, X_diesel_Val, Y_diesel_Val = (
-#         get_data_chunk("2025", "10", str(day).zfill(2))
-#     )
-#     X_val = np.concatenate([X_diesel_Val], axis=0)
-#     Y_val = np.concatenate([Y_diesel_Val], axis=0)
-# init models and trainers
-MLP_diesel = MLP(n_features=X_e5.shape[1], output_size=1, n_hidden=2, hidden_size=16)
-trainer = Trainer(MLP_diesel)
-
-# MLP_diesel.load_weights("best_model_weights.npz")
-# print(MLP_diesel.feed_forward(X_e5[:1]))
-# print(Y_e5[:1])
-
-# for i in range(2):  # number of training runs
-#     for year in range(2024, 2025 + 1):
-#         for month in range(1, 12 + 1):
-#             for day in range(1, 31 + 1):
-#                 # skip dates  with time changes
-#                 if str(month).zfill(2) == "03" and (
-#                     str(day).zfill(2) == "31" or str(day).zfill(2) == "30"
-#                 ):
-#                     continue
-
-#                 print(
-#                     f"Training on day {year}-{str(month).zfill(2)}-{str(day).zfill(2)} in run {i}."
-#                 )
-
-#                 # get data chunk
-#                 try:
-#                     X_e5, Y_e5, X_e10, Y_e10, X_diesel, Y_diesel = get_data_chunk(
-#                         str(year), str(month).zfill(2), str(day).zfill(2)
-#                     )
-#                 except FileNotFoundError as e:
-#                     print(
-#                         f"Error loading data for day {year}-{str(month).zfill(2)}-{str(day).zfill(2)}: {e}"
-#                     )
-#                     continue
-
-#                 if X_diesel is None or Y_diesel is None:
-#                     print(
-#                         f"Skipping day {year}-{str(month).zfill(2)}-{str(day).zfill(2)}"
-#                     )
-#                     continue
-
-#                 # check for NaN or Inf values
-#                 if not np.isfinite(X_diesel).all() or not np.isfinite(Y_diesel).all():
-#                     print(
-#                         "⚠️  Invalid value (NaN/Inf) in Batch. Skip this day.",
-#                         f"X_bad={~np.isfinite(X_diesel).sum()}",
-#                         f"Y_bad={~np.isfinite(Y_diesel).sum()}",
-#                     )
-#                     continue
-#                 trainer.train(
-#                     X_diesel,
-#                     Y_diesel,
-#                     X_val,
-#                     Y_val,
-#                     epochs=3,
-#                     batch_size=512,
-#                     patience=1,
-#                 )
-
-# test after training
-print("Testing after training:")
-MLP_diesel.load_weights("best_model_weights_diesel.npz")
-for day in range(15, 25 + 1):
-    print(f"Testing on day {day}.")
-    X_e5, Y_e5, X_e10, Y_e10, X_diesel, Y_diesel = get_data_chunk(
-        "2025", "10", str(day).zfill(2)
-    )
-    MLP_diesel_predictions = MLP_diesel.feed_forward(X_diesel)
-    test_loss = np.mean((MLP_diesel_predictions - Y_diesel) ** 2)
-    print(f"Test Loss on day {day}: {test_loss:.6f}")
-
-# def __init__(self, n_features, output_size, n_hidden, hidden_size):

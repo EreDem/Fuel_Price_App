@@ -1,6 +1,6 @@
 import numpy as np
 
-from preprocessing import get_data_chunk
+from preprocessing import data_to_features
 
 
 # Class for single layer of neurons
@@ -142,7 +142,7 @@ class Trainer:
 
                     # get data chunk
                     try:
-                        X_e5, Y_e5, X_e10, Y_e10, X_diesel, Y_diesel = get_data_chunk(
+                        X_e5, Y_e5, X_e10, Y_e10, X_diesel, Y_diesel = data_to_features(
                             str(year), str(month).zfill(2), str(day).zfill(2)
                         )
                         fuel_map = {
@@ -194,7 +194,7 @@ class Trainer:
                     Y_e10_Val,
                     X_diesel_Val,
                     Y_diesel_Val,
-                ) = get_data_chunk("2025", "10", day_str)
+                ) = data_to_features("2025", "10", day_str)
             except FileNotFoundError:
                 continue
 
