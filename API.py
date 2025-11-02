@@ -3,6 +3,7 @@ import zoneinfo
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
+import requests
 import yfinance as yf
 from mlp import MLP
 import numpy as np
@@ -12,17 +13,17 @@ app = FastAPI()
 tk_api_key = "c39abee3-9692-0aef-edbf-d282b3fab396"
 
 # load the pre-trained model
-MLP_e5 = MLP(n_features=8, output_size=1, n_hidden=2, hidden_size=16)
-MLP_e5.load_weights("best_model_weights_e5.npz")
-MLP_e10 = MLP(n_features=8, output_size=1, n_hidden=2, hidden_size=16)
-MLP_e10.load_weights("best_model_weights_e10.npz")
-MLP_diesel = MLP(n_features=8, output_size=1, n_hidden=2, hidden_size=16)
-MLP_diesel.load_weights("best_model_weights_diesel.npz")
-MODELS = {"e5": MLP_e5, "e10": MLP_e10, "diesel": MLP_diesel}
+ki_e5 = MLP(27, 1, 64, 2)
+ki_e5.load_weights("best_model_weigths_e5.npz")
+ki_e10 = MLP(27, 1, 64, 2)
+ki_e10.load_weights("best_model_weigths_e10.npz")
+ki_diesel = MLP(27, 1, 64, 2)
+ki_diesel.load_weights("best_model_weigths_diesel.npz")
+MODELS = {"e5": ki_e5, "e10": ki_e10, "diesel": ki_diesel}
 
 # load geo scaling for geo features
 _coords_df = pd.read_csv(
-    "station_uuid_to_coordinates.csv",
+    "training_data/station_uuid_to_coordinates.csv",
     usecols=["uuid", "latitude", "longitude"],
     dtype={"uuid": "string", "latitude": np.float32, "longitude": np.float32},
 )
@@ -81,18 +82,25 @@ def predict(fuel_type: str, station_uuid: str):
     brent["oil_3days"] = brent["brent_price"].shift(3)
     brent["oil_7days"] = brent["brent_price"].shift(7)
 
-    # combine oil features into a single vector 
-    oil_features = brent.iloc[-1][["oil_today", "oil_yesterday", "oil_2days", "oil_3days", "oil_7days"]].to_numpy(dtype=np.float32)
-    
+    # combine oil features into a single vector
+    oil_features = brent.iloc[-1][
+        ["oil_today", "oil_yesterday", "oil_2days", "oil_3days", "oil_7days"]
+    ].to_numpy(dtype=np.float32)
 
     # get exchange rate for exchange rate features
-    current_price = f"https://creativecommons.tankerkoenig.de/json/prices.php?ids={station_uuid}&apikey={tk_api_key}"
+    url = f"https://creativecommons.tankerkoenig.de/json/prices.php?ids={station_uuid}&apikey={tk_api_key}"
+    resp = requests.get(url)
+    data = resp.json()
+
+    prices = data.get("prices", {})
+    station_data = prices.get(station_uuid, {})
+
     current_prices = {
-        "e5": current_price.json().get("prices", {}).get(station_uuid, {}).get("e5", 1.7),
-        "e10": current_price.json().get("prices", {}).get(station_uuid, {}).get("e10", 1.6),
-        "diesel": current_price.json().get("prices", {}).get(station_uuid, {}).get("diesel", 1.5)
+        "e5": station_data.get("e5"),
+        "e10": station_data.get("e10"),
+        "diesel": station_data.get("diesel"),
     }
-    
+
     # get EUR/USD exchange rates for the last 8 days
     eurusd = yf.download("EURUSD=X", period="8d")["Close"].reset_index()
     eurusd.columns = ["date", "eur_usd_rate"]
@@ -103,10 +111,12 @@ def predict(fuel_type: str, station_uuid: str):
     eurusd["eur_usd_change_7d"] = eurusd["eur_usd_rate"].pct_change(7)
 
     # combine exchange rate features into a single vector
-    eurusd_features = eurusd.iloc[-1][["eur_usd_lag_1", "eur_usd_lag_7", "eur_usd_change_7d"]].to_numpy(dtype=np.float32)
+    eurusd_features = eurusd.iloc[-1][
+        ["eur_usd_lag_1", "eur_usd_lag_7", "eur_usd_change_7d"]
+    ].to_numpy(dtype=np.float32)
 
     # get current price for e5/e10/diesel to fill in missing lag features (temporary workaround)
-    
+
     current_price = current_prices.get(key, 1.5)
     # start time
     start_time = pd.Timestamp.now(tz=zoneinfo.ZoneInfo("Europe/Berlin"))
@@ -134,6 +144,11 @@ def predict(fuel_type: str, station_uuid: str):
         day_of_year_sin = np.sin(2 * np.pi * day_of_year / 365)
         day_of_year_cos = np.cos(2 * np.pi * day_of_year / 365)
 
+        # test shapes of features
+        print(
+            f"Features shapes: oil({oil_features.shape}), eurusd({eurusd_features.shape}), current_price({type(current_price)})"
+        )
+
         # assemble feature vector
         X_input = np.array(
             [
@@ -147,9 +162,9 @@ def predict(fuel_type: str, station_uuid: str):
                 norm_lon,
                 *oil_features,
                 *eurusd_features,
-                current_prices[fuel_type],
-                current_prices[fuel_type], # fill missing lag features with current price
-                current_prices[fuel_type],
+                current_price,
+                current_price,
+                current_price,
             ],
             dtype=np.float32,
         ).reshape(1, -1)
@@ -167,6 +182,4 @@ def predict(fuel_type: str, station_uuid: str):
             }
         )
 
-    return {
-        "predictions": time_to_price
-    }
+    return {"predictions": time_to_price}

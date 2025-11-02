@@ -1,4 +1,5 @@
 import numpy as np
+
 # from mlp import MLP
 # from mlp import Trainer
 import pandas as pd
@@ -20,42 +21,50 @@ np.savez(
     lon_std=lon_std,
 )
 
-# We have to simulate the passing of time for the model to predict future prices
-# Therefore we create new rows with the same base features but with a price from
-# the future and a horizon feature indicating how far in the future the price is.
-# This function adds a horizon feature to the csv file for a given date.
-def add_horizon_to_csv(year: str, month: str, day: str):
-    # load data from file
-    file_path = f"training_data/{year}/{month}/{year}-{month}-{day}-prices.csv"
-    
-    # create temp directory for modified file
-    temp_file_path = f"training_data/{year}/{month}/{year}-{month}-{day}-prices-temp.csv"
-
-    # save data
-    data = pd.read_csv(file_path)
-
-    # write data into temp file
-
 
 def data_to_features(year: str, month: str, day: str):
     # load data from file
-    # file_path = f"training_data/{year}/{month}/{year}-{month}-{day}-prices.csv"
-    file_path = f"training_example.csv"
+    file_path = f"training_data/{year}/{month}/{year}-{month}-{day}-prices.csv"
+    data = pd.read_csv(file_path)
+    # file_path = f"training_example.csv"
 
     #### create features and labels
 
+    ## create price lag features
+    # create last-price feature (previous entry for same station)
+    for fuel in ["diesel", "e5", "e10"]:
+        for lag in [1, 3, 10]:
+            data[f"{fuel}_lag_{lag}"] = data.groupby("station_uuid")[fuel].shift(lag)
+
+    lag_cols = [
+        "diesel_lag_1",
+        "diesel_lag_3",
+        "diesel_lag_10",
+        "e5_lag_1",
+        "e5_lag_3",
+        "e5_lag_10",
+        "e10_lag_1",
+        "e10_lag_3",
+        "e10_lag_10",
+    ]
+    # drop rows where last price is missing (first entry per station)
+    data = data.dropna(subset=lag_cols).reset_index(drop=True)
+
+    # extract last price features
+    X_last_diesel = data[["diesel_lag_1", "diesel_lag_3", "diesel_lag_10"]].to_numpy(
+        dtype=np.float32
+    )
+    X_last_e5 = data[["e5_lag_1", "e5_lag_3", "e5_lag_10"]].to_numpy(dtype=np.float32)
+    X_last_e10 = data[["e10_lag_1", "e10_lag_3", "e10_lag_10"]].to_numpy(
+        dtype=np.float32
+    )
+
     ## brand one-hot features
-    data = pd.read_csv(file_path)
     # sort by station and time
     data = data.sort_values(["station_uuid", "date"]).reset_index(drop=True)
 
     # map station_uuid to brand
-    station_info = pd.read_csv(
-        "stations.csv",   
-        usecols=["uuid", "brand"]
-    )
-
-    print(data.columns)
+    station_info = pd.read_csv("training_data/stations.csv", usecols=["uuid", "brand"])
 
     # merge brand into data
     data = data.merge(station_info, left_on="station_uuid", right_on="uuid", how="left")
@@ -77,20 +86,20 @@ def data_to_features(year: str, month: str, day: str):
     data = pd.concat([data, brand_dummies], axis=1)
 
     # combine brand one hot features
-    brand_features = data[[
-        "brand_Aral",
-        "brand_Esso",
-        "brand_Jet",
-        "brand_Total",
-        "brand_Shell",
-        "brand_Other"
-    ]].to_numpy(dtype=np.float32)
+    brand_features = data[
+        [
+            "brand_Aral",
+            "brand_Esso",
+            "brand_Jet",
+            "brand_Total",
+            "brand_Shell",
+            "brand_Other",
+        ]
+    ].to_numpy(dtype=np.float32)
 
     # get first col (date col) of csv
-    date = pd.read_csv(
-        file_path, usecols=["date"], parse_dates=["date"]
-    )
-    
+    # date = pd.read_csv(file_path, usecols=["date"], parse_dates=["date"])
+    date = data[["date"]].copy()
 
     # time is given with time zone, which we do not need
     date["date"] = pd.to_datetime(date["date"], errors="coerce")
@@ -116,7 +125,6 @@ def data_to_features(year: str, month: str, day: str):
     date["day_of_year_sin"] = np.sin(2 * np.pi * day_of_year / 365)
     date["day_of_year_cos"] = np.cos(2 * np.pi * day_of_year / 365)
 
-    
     isWeekend = (weekday == 5) | (weekday == 6)
     date["is_weekend"] = isWeekend.astype(np.float32)
 
@@ -134,9 +142,7 @@ def data_to_features(year: str, month: str, day: str):
     ].to_numpy(dtype=np.float32)
 
     ### Geo features
-    station_ids = pd.read_csv(
-        file_path, usecols=["station_uuid"], dtype={"station_uuid": "string"}
-    )
+    station_ids = data[["station_uuid"]].copy()
 
     # Map UUIDs to coordinates
     coords = pd.read_csv(
@@ -184,7 +190,6 @@ def data_to_features(year: str, month: str, day: str):
     oil_prices["oil_3days"] = oil_prices["brent_price"].shift(3)
     oil_prices["oil_7days"] = oil_prices["brent_price"].shift(7)
 
-
     # drop rows with NaN (first 7 days)
     oil_prices = oil_prices.dropna().reset_index(drop=True)
 
@@ -194,36 +199,45 @@ def data_to_features(year: str, month: str, day: str):
     # try exact match
     oil_row = oil_prices.loc[oil_prices["date"] == target_date]
 
+    # fallback: take the most recent previous entry if no exact match
+    if oil_row.empty:
+        prev_rows = oil_prices.loc[oil_prices["date"] <= target_date]
+        if len(prev_rows) > 0:
+            oil_row = prev_rows.iloc[[-1]]  # last previous row
+        else:
+            # if even that fails (target before first date), take the first row
+            oil_row = oil_prices.iloc[[0]]
 
     # extract values (shape (1,5))
-    oil_vals = oil_row[
-        ["oil_today", "oil_yesterday", "oil_2days", "oil_3days", "oil_7days"]
-    ].to_numpy(dtype=np.float32).reshape(-1)
+    oil_vals = (
+        oil_row[["oil_today", "oil_yesterday", "oil_2days", "oil_3days", "oil_7days"]]
+        .to_numpy(dtype=np.float32)
+        .reshape(-1)
+    )
 
-    n = len(X_time)   
+    n = len(X_time)
 
     # Adjust shape
-    oil_today_vec     = np.full(n, oil_vals[0], dtype=np.float32)
+    oil_today_vec = np.full(n, oil_vals[0], dtype=np.float32)
     oil_yesterday_vec = np.full(n, oil_vals[1], dtype=np.float32)
-    oil_2days_vec     = np.full(n, oil_vals[2], dtype=np.float32)
-    oil_3days_vec     = np.full(n, oil_vals[3], dtype=np.float32)
-    oil_7days_vec     = np.full(n, oil_vals[4], dtype=np.float32)
+    oil_2days_vec = np.full(n, oil_vals[2], dtype=np.float32)
+    oil_3days_vec = np.full(n, oil_vals[3], dtype=np.float32)
+    oil_7days_vec = np.full(n, oil_vals[4], dtype=np.float32)
 
-    oil_features = np.column_stack([
-        oil_today_vec,
-        oil_yesterday_vec,
-        oil_2days_vec,
-        oil_3days_vec,
-        oil_7days_vec,
-    ])
-
+    oil_features = np.column_stack(
+        [
+            oil_today_vec,
+            oil_yesterday_vec,
+            oil_2days_vec,
+            oil_3days_vec,
+            oil_7days_vec,
+        ]
+    )
 
     ## exchange rate features
     # load exchange rates
     exchange_rates = pd.read_csv(
-        "exchange_rates.csv",
-        usecols=["date", "eur_usd_rate"],
-        parse_dates=["date"]
+        "exchange_rates.csv", usecols=["date", "eur_usd_rate"], parse_dates=["date"]
     )
 
     # drop rows with NaN (first 7 days)
@@ -237,79 +251,67 @@ def data_to_features(year: str, month: str, day: str):
     # try exact match
     exchange_rates_row = exchange_rates.loc[exchange_rates["date"] == target_date]
 
+    # fallback: take latest previous date if no exact match
+    if exchange_rates_row.empty:
+        prev_rows = exchange_rates.loc[exchange_rates["date"] <= target_date]
+        if len(prev_rows) > 0:
+            exchange_rates_row = prev_rows.iloc[[-1]]
+        else:
+            # if target_date is before all exchange rate rows, take the first available
+            exchange_rates_row = exchange_rates.iloc[[0]]
+
     # extract values (shape (1,4))
-    exchange_vals = exchange_rates_row[["eur_usd_rate", "eur_usd_lag_1", "eur_usd_lag_7", "eur_usd_change_7d"]].to_numpy(dtype=np.float32).reshape(-1)
+    exchange_vals = (
+        exchange_rates_row[
+            ["eur_usd_rate", "eur_usd_lag_1", "eur_usd_lag_7", "eur_usd_change_7d"]
+        ]
+        .to_numpy(dtype=np.float32)
+        .reshape(-1)
+    )
 
     n = len(X_time)
     # Adjust shape
-    eur_usd_rate_vec        = np.full(n, exchange_vals[0], dtype=np.float32)
-    eur_usd_lag_1_vec      = np.full(n, exchange_vals[1], dtype=np.float32)
-    eur_usd_lag_7_vec      = np.full(n, exchange_vals[2], dtype=np.float32)
-    eur_usd_change_7d_vec  = np.full(n, exchange_vals[3], dtype=np.float32)
+    eur_usd_rate_vec = np.full(n, exchange_vals[0], dtype=np.float32)
+    eur_usd_lag_1_vec = np.full(n, exchange_vals[1], dtype=np.float32)
+    eur_usd_lag_7_vec = np.full(n, exchange_vals[2], dtype=np.float32)
+    eur_usd_change_7d_vec = np.full(n, exchange_vals[3], dtype=np.float32)
 
     # combine exchange rate features
-    exchange_rates = np.column_stack([
-        eur_usd_rate_vec,
-        eur_usd_lag_1_vec,
-        eur_usd_lag_7_vec,
-        eur_usd_change_7d_vec,
-    ])
-
-
-    ## create price lag features
-    # create last-price feature (previous entry for same station)
-    for fuel in ["diesel", "e5", "e10"]:
-        for lag in [1, 3, 10]:
-            data[f"{fuel}_lag_{lag}"] = data.groupby("station_uuid")[fuel].shift(lag)
-
-    lag_cols = [
-        "diesel_lag_1", "diesel_lag_3", "diesel_lag_10",
-        "e5_lag_1", "e5_lag_3", "e5_lag_10",
-        "e10_lag_1", "e10_lag_3", "e10_lag_10",
-    ]
-    # drop rows where last price is missing (first entry per station)
-    data = data.dropna(subset=lag_cols).reset_index(drop=True)
-
-    # extract last price features
-    X_last_diesel = data[["diesel_lag_1", "diesel_lag_3", "diesel_lag_10"]].to_numpy(dtype=np.float32)
-    X_last_e5 = data[["e5_lag_1", "e5_lag_3", "e5_lag_10"]].to_numpy(dtype=np.float32)
-    X_last_e10 = data[["e10_lag_1", "e10_lag_3", "e10_lag_10"]].to_numpy(dtype=np.float32)
-
-    # test data shapes before combining
-    print("X_time shape:", X_time.shape)
-    print("lat shape:", lat.shape)
-    print("lon shape:", lon.shape)
-    print("oil_prices shape:", oil_features.shape)
-    print("exchange_rates shape:", exchange_rates.shape)
-    print("brand_features shape:", brand_features.shape)
+    exchange_rates = np.column_stack(
+        [
+            eur_usd_rate_vec,
+            eur_usd_lag_1_vec,
+            eur_usd_lag_7_vec,
+            eur_usd_change_7d_vec,
+        ]
+    )
     ## combine features
-    X_e5 = np.column_stack([X_time, lat, lon, oil_features, exchange_rates, brand_features, X_last_e5])
-    X_e10 = np.column_stack([X_time, lat, lon, oil_features, exchange_rates, brand_features, X_last_e10])
-    X_diesel = np.column_stack([X_time, lat, lon, oil_features, exchange_rates, brand_features, X_last_diesel])
+    X_e5 = np.column_stack(
+        [X_time, lat, lon, oil_features, exchange_rates, brand_features, X_last_e5]
+    )
+    X_e10 = np.column_stack(
+        [X_time, lat, lon, oil_features, exchange_rates, brand_features, X_last_e10]
+    )
+    X_diesel = np.column_stack(
+        [X_time, lat, lon, oil_features, exchange_rates, brand_features, X_last_diesel]
+    )
 
     ### make labels
-    Y_e5 = pd.read_csv(file_path, usecols=["e5"]).to_numpy(dtype=np.float32)
-    Y_e10 = pd.read_csv(file_path, usecols=["e10"]).to_numpy(dtype=np.float32)
-    Y_diesel = pd.read_csv(file_path, usecols=["diesel"]).to_numpy(dtype=np.float32)
+    Y_e5 = data[["e5"]].copy()
+    Y_e10 = data[["e10"]].copy()
+    Y_diesel = data[["diesel"]].copy()
 
     ## remove rows with missing labels, reshape Ys
-    mask = Y_e5 > 0
-    X_e5 = X_e5[mask.flatten()]
-    Y_e5 = Y_e5[mask]
-    Y_e5 = Y_e5.reshape(-1, 1)
+    mask_e5 = (Y_e5.to_numpy() > 0).ravel()  # shape (N,)
+    X_e5 = X_e5[mask_e5]
+    Y_e5 = Y_e5.to_numpy(dtype=np.float32)[mask_e5].reshape(-1, 1)
 
-    mask = Y_e10 > 0
-    X_e10 = X_e10[mask.flatten()]
-    Y_e10 = Y_e10[mask]
-    Y_e10 = Y_e10.reshape(-1, 1)
+    mask_e10 = (Y_e10.to_numpy() > 0).ravel()
+    X_e10 = X_e10[mask_e10]
+    Y_e10 = Y_e10.to_numpy(dtype=np.float32)[mask_e10].reshape(-1, 1)
 
-    mask = Y_diesel > 0
-    X_diesel = X_diesel[mask.flatten()]
-    Y_diesel = Y_diesel[mask]
-    Y_diesel = Y_diesel.reshape(-1, 1)
-
-
-
+    mask_diesel = (Y_diesel.to_numpy() > 0).ravel()
+    X_diesel = X_diesel[mask_diesel]
+    Y_diesel = Y_diesel.to_numpy(dtype=np.float32)[mask_diesel].reshape(-1, 1)
 
     return X_e5, Y_e5, X_e10, Y_e10, X_diesel, Y_diesel
-

@@ -130,6 +130,9 @@ class Trainer:
         for year in range(2024, 2025 + 1):
             for month in range(1, 12 + 1):
                 for day in range(1, 31 + 1):
+                    # skip october of 2025 (validation set)
+                    if year == 2025 and month == 10:
+                        continue
                     # skip dates  with time changes
                     if str(month).zfill(2) == "03" and (
                         str(day).zfill(2) == "31" or str(day).zfill(2) == "30"
@@ -178,15 +181,15 @@ class Trainer:
                         Y_batch = Y[i : i + batch_size]
                         # train on batch
                         self.model.backward(X_batch, Y_batch)
-    
+
     def generate_validation_set(self, training_on: str = "diesel"):
         X_list = []
         Y_list = []
 
         for day in range(1, 14 + 1):
             day_str = str(day).zfill(2)
-            print(f"Loading validation data for day 2025-10-{day_str}")
             try:
+                print(f"Loading validation data for day 2025-10-{day_str}")
                 (
                     X_e5_Val,
                     Y_e5_Val,
@@ -196,6 +199,7 @@ class Trainer:
                     Y_diesel_Val,
                 ) = data_to_features("2025", "10", day_str)
             except FileNotFoundError:
+                print("file not found")
                 continue
 
             fuel_map = {
@@ -218,8 +222,7 @@ class Trainer:
         Y_val = np.concatenate(Y_list, axis=0)
         return X_val, Y_val
 
-
-    def train(self, epochs = 10, training_on = "e5", batch_size=512, patience=10):
+    def train(self, epochs=10, training_on="e5", batch_size=512, patience=10):
         no_improve_epochs = 0
         best_loss = float("inf")
         best_params = None
@@ -230,7 +233,9 @@ class Trainer:
         # training loop
         for epoch in range(epochs):
             # train on data
-            self.train_on_data(batch_size=batch_size, training_on=training_on, epoch=epoch)
+            self.train_on_data(
+                batch_size=batch_size, training_on=training_on, epoch=epoch
+            )
             ## validate after each epoch
             # calculate validation loss
             Y_val_pred = self.model.feed_forward(X_val)
@@ -264,5 +269,3 @@ class Trainer:
         # save best model weights in npz file
         self.model.set_params(best_params)
         self.model.save_weights(f"best_model_weights_{training_on}.npz")
-
-
