@@ -71,8 +71,8 @@ def predict(fuel_type: str, station_uuid: str):
     norm_lon = (station_lon - LON_MEAN) / LON_STD
 
     # get oil price for oil price features
-    # get Brent prices for the last 8 days
-    brent = yf.download("BZ=F", period="8d")["Close"].reset_index()
+    # get Brent prices for the last 9 days
+    brent = yf.download("BZ=F", period="9d")["Close"].reset_index()
     brent.columns = ["date", "brent_price"]
 
     # create lag features
@@ -80,7 +80,8 @@ def predict(fuel_type: str, station_uuid: str):
     brent["oil_yesterday"] = brent["brent_price"].shift(1)
     brent["oil_2days"] = brent["brent_price"].shift(2)
     brent["oil_3days"] = brent["brent_price"].shift(3)
-    brent["oil_7days"] = brent["brent_price"].shift(7)
+    # brent["oil_7days"] = brent["brent_price"].shift(7)
+    brent["oil_7days"] = brent["brent_price"].shift(3)
 
     # combine oil features into a single vector
     oil_features = brent.iloc[-1][
@@ -106,26 +107,33 @@ def predict(fuel_type: str, station_uuid: str):
     eurusd.columns = ["date", "eur_usd_rate"]
 
     # create lag features
+    eurusd["eur_usd_rate"] = eurusd["eur_usd_rate"]
     eurusd["eur_usd_lag_1"] = eurusd["eur_usd_rate"].shift(1)
     eurusd["eur_usd_lag_7"] = eurusd["eur_usd_rate"].shift(7)
-    eurusd["eur_usd_change_7d"] = eurusd["eur_usd_rate"].pct_change(7)
+    eurusd["eur_usd_change_7_pct"] = eurusd["eur_usd_rate"].pct_change(7)
 
     # combine exchange rate features into a single vector
     eurusd_features = eurusd.iloc[-1][
-        ["eur_usd_lag_1", "eur_usd_lag_7", "eur_usd_change_7d"]
+        ["eur_usd_rate", "eur_usd_lag_1", "eur_usd_lag_7", "eur_usd_change_7_pct"]
     ].to_numpy(dtype=np.float32)
 
     # get current price for e5/e10/diesel to fill in missing lag features (temporary workaround)
-
-    current_price = current_prices.get(key, 1.5)
+    #workaround for with dummy value
+    current_price_1 = 1.70
+    current_price_2 = 1.69
+    current_price_3 = 1.645
     # start time
     start_time = pd.Timestamp.now(tz=zoneinfo.ZoneInfo("Europe/Berlin"))
 
     time_to_price = []
 
+    # create brand one-hot feature
+    brand_one_hot = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]  # placeholder for 6 brands
+
     for t in range(144):  # next 72 hours in 30-min intervals
         # build time features
-        current_time = start_time + pd.Timedelta(minutes=30 * t)
+        # start with yesterday same time
+        current_time = start_time - pd.Timedelta(days=10) + pd.Timedelta(minutes=30 * t)
 
         # Hour + Minute as decimal hour (e.g., 13.5 for 13:30)
         hour = current_time.hour + current_time.minute / 60.0
@@ -144,42 +152,50 @@ def predict(fuel_type: str, station_uuid: str):
         day_of_year_sin = np.sin(2 * np.pi * day_of_year / 365)
         day_of_year_cos = np.cos(2 * np.pi * day_of_year / 365)
 
-        # test shapes of features
-        print(
-            f"Features shapes: oil({oil_features.shape}), eurusd({eurusd_features.shape}), current_price({type(current_price)})"
-        )
-
         # assemble feature vector
         X_input = np.array(
             [
-                hour_sin,
-                hour_cos,
-                weekday_sin,
-                weekday_cos,
-                day_of_year_sin,
+                # time features (7)
+                hour_sin, 
+                hour_cos, 
+                weekday_sin, 
+                weekday_cos, 
+                day_of_year_sin, 
                 day_of_year_cos,
-                norm_lat,
-                norm_lon,
-                *oil_features,
-                *eurusd_features,
-                current_price,
-                current_price,
-                current_price,
+                1.0 if weekday < 5 else 0.0, 
+                # geo features (2)
+                norm_lat, 
+                norm_lon, 
+                # oil price features (5)
+                *oil_features, 
+                # exchange rate features (4)
+                *eurusd_features, 
+                #  brand one-hot features (6) - all zeros as placeholder
+                *brand_one_hot,
+                # price lag features (3) - using current price as placeholder
+                current_price_1, 
+                current_price_2,
+                current_price_3,
             ],
             dtype=np.float32,
         ).reshape(1, -1)
 
-        # predict price
+        print("input shape: " +  str(X_input.shape))
+        print("input data: ")
+        print(X_input)
+
         price_pred = model.feed_forward(X_input)
+        print("raw model output: " + str(price_pred))
         price = float(price_pred)
+        print(f"Predicted price at time {current_time}: {price:.3f} EUR")
 
         decimal_time = (hour) % 24  # 0..24, bei 25 -> 1 usw.
 
         time_to_price.append(
-            {
-                "time": round(decimal_time, 3),
-                "price": price,
-            }
+        {
+            "time": round(decimal_time, 3),
+            "price": price,
+        }
         )
 
     return {"predictions": time_to_price}

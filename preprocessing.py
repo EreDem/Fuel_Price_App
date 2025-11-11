@@ -246,7 +246,7 @@ def data_to_features(year: str, month: str, day: str):
     # create lag features
     exchange_rates["eur_usd_lag_1"] = exchange_rates["eur_usd_rate"].shift(1)
     exchange_rates["eur_usd_lag_7"] = exchange_rates["eur_usd_rate"].shift(7)
-    exchange_rates["eur_usd_change_7d"] = exchange_rates["eur_usd_rate"].pct_change(7)
+    exchange_rates["eur_usd_change_7_pct"] = exchange_rates["eur_usd_rate"].pct_change(7)
 
     # try exact match
     exchange_rates_row = exchange_rates.loc[exchange_rates["date"] == target_date]
@@ -263,7 +263,7 @@ def data_to_features(year: str, month: str, day: str):
     # extract values (shape (1,4))
     exchange_vals = (
         exchange_rates_row[
-            ["eur_usd_rate", "eur_usd_lag_1", "eur_usd_lag_7", "eur_usd_change_7d"]
+            ["eur_usd_rate", "eur_usd_lag_1", "eur_usd_lag_7", "eur_usd_change_7_pct"]
         ]
         .to_numpy(dtype=np.float32)
         .reshape(-1)
@@ -271,18 +271,18 @@ def data_to_features(year: str, month: str, day: str):
 
     n = len(X_time)
     # Adjust shape
-    eur_usd_rate_vec = np.full(n, exchange_vals[0], dtype=np.float32)
-    eur_usd_lag_1_vec = np.full(n, exchange_vals[1], dtype=np.float32)
-    eur_usd_lag_7_vec = np.full(n, exchange_vals[2], dtype=np.float32)
-    eur_usd_change_7d_vec = np.full(n, exchange_vals[3], dtype=np.float32)
+    eur_usd_rate = np.full(n, exchange_vals[0], dtype=np.float32)
+    eur_usd_lag_1 = np.full(n, exchange_vals[1], dtype=np.float32)
+    eur_usd_lag_7 = np.full(n, exchange_vals[2], dtype=np.float32)
+    eur_usd_change_7d_pct = np.full(n, exchange_vals[3], dtype=np.float32)
 
     # combine exchange rate features
     exchange_rates = np.column_stack(
         [
-            eur_usd_rate_vec,
-            eur_usd_lag_1_vec,
-            eur_usd_lag_7_vec,
-            eur_usd_change_7d_vec,
+            eur_usd_rate,
+            eur_usd_lag_1,
+            eur_usd_lag_7,
+            eur_usd_change_7d_pct,
         ]
     )
     ## combine features

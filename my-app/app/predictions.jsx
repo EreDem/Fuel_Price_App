@@ -9,10 +9,6 @@ export default function Predictions() {
 
   const { predictions } = usePredictions();
 
-  if (!predictions) {
-    return <Text>Keine Vorhersagen verfügbar</Text>;
-  }
-
   const predData =
     predictions?.predictions?.map((p) => ({ x: p.time, y: p.price })) ?? [];
   console.log(
@@ -140,21 +136,25 @@ export default function Predictions() {
 
           {/* prediction graph */}
           <View style={{ flex: 1, marginHorizontal: "auto", paddingTop: 40 }}>
-            <VictoryChart
-              domain={{ x: [0, 24], y: [1.0, 2.5] }}
-              domainPadding={{ x: 20, y: 12 }}
-            >
-              <VictoryAxis
-                label="Uhrzeit"
-                tickValues={[0, 6, 12, 18, 24]}
-                tickFormat={(t) => `${t}h`}
-              />
-              <VictoryAxis dependentAxis label="Preis (€)" />
-              <VictoryLine
-                data={chartData}
-                style={{ data: { stroke: "#2563EB", strokeWidth: 2 } }}
-              />
-            </VictoryChart>
+            {predictions ? (
+              <VictoryChart
+                domain={{ x: [0, 24], y: [1.0, 2.5] }}
+                domainPadding={{ x: 20, y: 12 }}
+              >
+                <VictoryAxis
+                  label="Uhrzeit"
+                  tickValues={[0, 6, 12, 18, 24]}
+                  tickFormat={(t) => `${t}h`}
+                />
+                <VictoryAxis dependentAxis label="Preis (€)" />
+                <VictoryLine
+                  data={chartData}
+                  style={{ data: { stroke: "#2563EB", strokeWidth: 2 } }}
+                />
+              </VictoryChart>
+            ) : (
+              <Text>Keine Vorhersage Verfügbar</Text>
+            )}
           </View>
         </View>
         {/* view for prediction */}
