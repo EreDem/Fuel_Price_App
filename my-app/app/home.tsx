@@ -3,6 +3,7 @@ import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { FlatList } from "react-native-actions-sheet";
 import { List, Menu, Searchbar } from "react-native-paper";
 import { DropdownIcon, FuelPumpIcon, LocationIcon } from "../assets/svgs";
+import stations from "../stations.json";
 import { usePredictions } from "./predictionsContext";
 
 export default function Home() {
@@ -43,10 +44,8 @@ export default function Home() {
 
   // load stations on mount
   useEffect(() => {
-    import("../stations.json").then((mod) => {
-      setVisibleStations(mod.default);
-      setAllStations(mod.default);
-    });
+    setVisibleStations(stations);
+    setAllStations(stations);
   }, []);
 
   // enable searching

@@ -59,6 +59,8 @@ uvicorn API:app --reload
 
 ### Start Frontend
 
+```bash
 cd Fuel_Price_App/my-app
 npm install
 npx expo start
+```
