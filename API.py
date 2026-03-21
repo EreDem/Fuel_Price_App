@@ -16,6 +16,12 @@ app = FastAPI()
 
 tk_api_key = os.getenv("api_key")
 
+if tk_api_key is None:
+    print("No API key provided – using fallback data")
+    USE_API = False
+else:
+    USE_API = True
+
 # load the pre-trained model
 ki_e5 = MLP(27, 1, 64, 2)
 # ki_e5.load_weights("best_model_weigths_e5.npz")
@@ -113,9 +119,14 @@ def predict(fuel_type: str, station_uuid: str):
     ].to_numpy(dtype=np.float32)
 
     # get exchange rate for exchange rate features
-    url = f"https://creativecommons.tankerkoenig.de/json/prices.php?ids={station_uuid}&apikey={tk_api_key}"
-    resp = requests.get(url)
-    data = resp.json()
+    if not USE_API:
+        # dummy values for current prices if API not used
+        print("Using dummy current price values")
+        current_prices = {"e5": 1.70, "e10": 1.69, "diesel": 1.645}
+    else:
+        url = f"https://creativecommons.tankerkoenig.de/json/prices.php?ids={station_uuid}&apikey={tk_api_key}"
+        resp = requests.get(url)
+        data = resp.json()
 
     prices = data.get("prices", {})
     station_data = prices.get(station_uuid, {})
