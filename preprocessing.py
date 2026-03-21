@@ -7,11 +7,17 @@ import os
 
 
 # normalize coordinate features and save scaler parameters
-coords = pd.read_csv(
-    "training_data/station_uuid_to_coordinates.csv", usecols=["latitude", "longitude"]
-)
-lat_mean, lat_std = coords["latitude"].mean(), coords["latitude"].std()
-lon_mean, lon_std = coords["longitude"].mean(), coords["longitude"].std()
+try:
+    coords = pd.read_csv(
+        "training_data/station_uuid_to_coordinates.csv", usecols=["latitude", "longitude"]
+    )
+    lat_mean, lat_std = coords["latitude"].mean(), coords["latitude"].std()
+    lon_mean, lon_std = coords["longitude"].mean(), coords["longitude"].std()
+except FileNotFoundError:
+    print("Using dummy geo values")
+    # Dummy-Werte (z. B. Aachen)
+    lat_mean, lat_std = 50.94, 0.01
+    lon_mean, lon_std = 6.96, 0.01
 
 np.savez(
     "geo_scaler.npz",

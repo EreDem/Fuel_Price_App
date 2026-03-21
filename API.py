@@ -1,4 +1,5 @@
 from datetime import date
+import os
 import zoneinfo
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,34 +8,57 @@ import requests
 import yfinance as yf
 from mlp import MLP
 import numpy as np
+import dotenv
+
+dotenv.load_dotenv()  # load environment variables from .env file
 
 app = FastAPI()
 
-tk_api_key = "c39abee3-9692-0aef-edbf-d282b3fab396"
+tk_api_key = os.getenv("api_key")
 
 # load the pre-trained model
 ki_e5 = MLP(27, 1, 64, 2)
-ki_e5.load_weights("best_model_weigths_e5.npz")
+# ki_e5.load_weights("best_model_weigths_e5.npz")
 ki_e10 = MLP(27, 1, 64, 2)
-ki_e10.load_weights("best_model_weigths_e10.npz")
+# ki_e10.load_weights("best_model_weigths_e10.npz")
 ki_diesel = MLP(27, 1, 64, 2)
-ki_diesel.load_weights("best_model_weigths_diesel.npz")
+# ki_diesel.load_weights("best_model_weigths_diesel.npz")
 MODELS = {"e5": ki_e5, "e10": ki_e10, "diesel": ki_diesel}
 
 # load geo scaling for geo features
-_coords_df = pd.read_csv(
-    "training_data/station_uuid_to_coordinates.csv",
-    usecols=["uuid", "latitude", "longitude"],
-    dtype={"uuid": "string", "latitude": np.float32, "longitude": np.float32},
-)
+try:
+    _coords_df = pd.read_csv(
+        "training_data/station_uuid_to_coordinates.csv",
+        usecols=["uuid", "latitude", "longitude"],
+        dtype={"uuid": str, "latitude": np.float32, "longitude": np.float32},
+    )
+except FileNotFoundError:
+    # dummy values for geo coordinates if file not found
+    print("Using dummy geo values")
+    _coords_df = pd.DataFrame({
+        "uuid": ["station_1", "station_2", "station_3"],
+        "latitude": np.array([50.94, 50.95, 50.96], dtype=np.float32),
+        "longitude": np.array([6.96, 6.97, 6.98], dtype=np.float32),
+    })
 COORD_MAP = dict(
     zip(_coords_df["uuid"], zip(_coords_df["latitude"], _coords_df["longitude"]))
 )
 
 # load geo scaler
-_geo = np.load("geo_scaler.npz", allow_pickle=True)
-LAT_MEAN, LAT_STD = float(_geo["lat_mean"]), max(float(_geo["lat_std"]), 1e-8)
-LON_MEAN, LON_STD = float(_geo["lon_mean"]), max(float(_geo["lon_std"]), 1e-8)
+try:
+    _geo = np.load("geo_scaler.npz", allow_pickle=True)
+    LAT_MEAN = float(_geo["lat_mean"])
+    LAT_STD = max(float(_geo["lat_std"]), 1e-8)
+    LON_MEAN = float(_geo["lon_mean"])
+    LON_STD = max(float(_geo["lon_std"]), 1e-8)
+except FileNotFoundError:
+    # dummy values for geo scaler if file not found
+    print("Using dummy geo scaler values")
+
+    LAT_MEAN = 50.94
+    LAT_STD = 0.01
+    LON_MEAN = 6.96
+    LON_STD = 0.01
 
 
 # allowed origins for CORS
