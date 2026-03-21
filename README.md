@@ -38,3 +38,9 @@ flowchart LR
     C --> D[Custom MLP Model]
     D --> B
     B --> A
+```
+## Limitations
+
+- The current model does not produce meaningful predictions due to missing trained weights  
+- Placeholder (dummy) data is used to keep the system runnable  
+- The project is a prototype and not production-ready  
