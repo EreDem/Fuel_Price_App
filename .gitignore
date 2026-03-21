@@ -55,3 +55,6 @@ tsconfig.json
 training_data/**/*.csv
 training_data/
 .venv/
+*.pyc
+*.npz
+*.code-workspace
