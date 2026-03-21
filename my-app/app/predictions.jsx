@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { Button, Text } from "react-native-paper";
-import { VictoryAxis, VictoryChart, VictoryLine } from "victory-native";
 import { usePredictions } from "./predictionsContext";
 
 export default function Predictions() {
@@ -15,7 +14,7 @@ export default function Predictions() {
     "predictions len:",
     predictions?.length,
     "first:",
-    predictions?.[0]
+    predictions?.[0],
   );
 
   const chartData = (Array.isArray(predictions) ? predictions : []).map(
@@ -33,7 +32,7 @@ export default function Predictions() {
         x: typeof item.time === "number" ? item.time : Number(item.time),
         y: typeof item.price === "number" ? item.price : Number(item.price),
       };
-    }
+    },
   );
 
   return (
@@ -136,7 +135,7 @@ export default function Predictions() {
 
           {/* prediction graph */}
           <View style={{ flex: 1, marginHorizontal: "auto", paddingTop: 40 }}>
-            {predictions ? (
+            {/* {predictions ? (
               <VictoryChart
                 domain={{ x: [0, 24], y: [1.0, 2.5] }}
                 domainPadding={{ x: 20, y: 12 }}
@@ -153,8 +152,8 @@ export default function Predictions() {
                 />
               </VictoryChart>
             ) : (
-              <Text>Keine Vorhersage Verfügbar</Text>
-            )}
+              )} */}
+            <Text>Keine Vorhersage Verfügbar</Text>
           </View>
         </View>
         {/* view for prediction */}
