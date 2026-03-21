@@ -43,4 +43,15 @@ flowchart LR
 
 - The current model does not produce meaningful predictions due to missing trained weights  
 - Placeholder (dummy) data is used to keep the system runnable  
-- The project is a prototype and not production-ready  
+- The project is a prototype and not production-ready
+
+## How to Run
+
+```bash
+git clone https://github.com/EreDem/Fuel_Price_App.git
+cd Fuel_Price_App
+pip install -r requirements.txt
+uvicorn API:app --reload
+cd my-app
+npm install
+npx expo start
