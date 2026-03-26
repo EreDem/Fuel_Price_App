@@ -4,4 +4,5 @@ python-dotenv
 numpy
 pandas
 requests
-yfinance
+cupy
+# yfinance
