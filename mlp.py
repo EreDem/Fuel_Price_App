@@ -55,3 +55,28 @@ class NeuronLayer:
     def update(self, learning_rate):
         self.weights = self.weights - learning_rate * self.delta_weights
         self.biases = self.biases - learning_rate * self.delta_biases
+
+class MLP:
+    def __init__(self, input_layer_size, layer_sizes, output_layer_size):
+        self.layers = []
+        self.layers.append(NeuronLayer(input_layer_size, layer_sizes[0]))
+        for i in range(len(layer_sizes) - 1):
+            self.layers.append(NeuronLayer(layer_sizes[i], layer_sizes[i + 1]))
+        self.layers.append(NeuronLayer(layer_sizes[-1], output_layer_size))
+
+    def forward(self, X):
+        output = X
+        for layer in self.layers:
+            output = layer.forward(output)
+        return output
+
+    def backward(self, y_true, y_pred):
+        # compute gradient of loss with respect to output
+        output_gradient = mse_derivative(y_true, y_pred)
+        # backpropagate through layers in reverse order
+        for layer in reversed(self.layers):
+            output_gradient = layer.backward(output_gradient)
+
+    def update(self, learning_rate):
+        for layer in self.layers:
+            layer.update(learning_rate)
