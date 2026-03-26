@@ -11,8 +11,12 @@ class DataLoader:
         self.file_path = file_path
 
     @staticmethod
-    def load_data(file_path):
+    def load_data(file_path, rows=None, columns=None):
         data = pd.read_csv(file_path)
+        if rows is not None:
+            data = data.iloc[rows]
+        if columns is not None:
+            data = data.iloc[:, columns]
         return data
 
     @staticmethod
@@ -240,7 +244,11 @@ if __name__ == "__main__":
         X.append(features)
         y.append(labels)
 
-    # ADD SHUFFLING!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # shuffle data set
+    indices = np.random.permutation(len(X))
+    X = X[indices]
+    y = y[indices]
+
 
     X = np.vstack(X).astype(np.float32)
     y = np.vstack(y).astype(np.float32)

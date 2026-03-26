@@ -57,10 +57,10 @@ class NeuronLayer:
         self.biases = self.biases - learning_rate * self.delta_biases
 
 class MLP:
-    def __init__(self, input_layer_size, layer_sizes, output_layer_size):
+    def __init__(self, input_layer_size, layer_sizes, number_hidden_layers, output_layer_size):
         self.layers = []
         self.layers.append(NeuronLayer(input_layer_size, layer_sizes[0]))
-        for i in range(len(layer_sizes) - 1):
+        for i in range(number_hidden_layers - 1):
             self.layers.append(NeuronLayer(layer_sizes[i], layer_sizes[i + 1]))
         self.layers.append(NeuronLayer(layer_sizes[-1], output_layer_size))
 
@@ -80,3 +80,15 @@ class MLP:
     def update(self, learning_rate):
         for layer in self.layers:
             layer.update(learning_rate)
+
+    def save_weights(self):
+        # save weights and biases to file
+        for i, layer in enumerate(self.layers):
+            cp.save(f"layer_{i}_weights.npy", layer.weights)
+            cp.save(f"layer_{i}_biases.npy", layer.biases)
+    
+    def load_weights(self):
+        # load weights and biases from file
+        for i, layer in enumerate(self.layers):
+            layer.weights = cp.load(f"layer_{i}_weights.npy")
+            layer.biases = cp.load(f"layer_{i}_biases.npy")
