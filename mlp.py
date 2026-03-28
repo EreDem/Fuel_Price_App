@@ -1,8 +1,8 @@
-import cupy as cp
+import numpy as np
 
 
 def mse(y_true, y_pred):
-    return cp.mean(cp.square(y_pred - y_true))
+    return np.mean(np.square(y_pred - y_true))
 
 
 def mse_derivative(y_true, y_pred):
@@ -13,11 +13,11 @@ def mse_derivative(y_true, y_pred):
 class NeuronLayer:
     def __init__(self, input_size, output_size):
         # use He initialization for weights
-        std = cp.sqrt(2.0 / input_size)
+        std = np.sqrt(2.0 / input_size)
         # weights.shape = [n_inputs, n_neurons]
-        self.weights = cp.random.normal(0, std, (input_size, output_size))
+        self.weights = np.random.normal(0, std, (input_size, output_size))
         # biases.shape = [1, n_neurons]
-        self.biases = cp.zeros((1, output_size))
+        self.biases = np.zeros((1, output_size))
 
         # input_data.shape = [n_batch, n_inputs]
         self.input_data = None
@@ -29,9 +29,9 @@ class NeuronLayer:
 
     def forward(self, input):
         self.input_data = input
-        self.z = cp.dot(input, self.weights) + self.biases
+        self.z = np.dot(input, self.weights) + self.biases
         # use ReLU function
-        return cp.max(0, self.z)
+        return np.maximum(0, self.z)
 
     def backward(self, output_gradient):
         # output_gradien.shape = [n_batch, n_neurons]
@@ -44,25 +44,28 @@ class NeuronLayer:
         delta = output_gradient * relu_gradient
 
         # [n_inputs, n_batch] @ [n_batch, n_neurons] = [n_inputs, n_neurons]
-        self.delta_weights = cp.dot(self.input_data.T, delta)
+        self.delta_weights = np.dot(self.input_data.T, delta)
         # [n_batch, n_neurons] -> [1, n_neurons]
-        self.delta_biases = cp.sum(delta, axis=0, keepdims=True)
+        self.delta_biases = np.sum(delta, axis=0, keepdims=True)
 
         # return gradient for next layer
         # [n_batch, n_inputs]
-        return cp.dot(delta, self.weights.T)
+        return np.dot(delta, self.weights.T)
 
     def update(self, learning_rate):
         self.weights = self.weights - learning_rate * self.delta_weights
         self.biases = self.biases - learning_rate * self.delta_biases
 
+
 class MLP:
-    def __init__(self, input_layer_size, layer_sizes, number_hidden_layers, output_layer_size):
+    def __init__(
+        self, input_layer_size, layer_sizes, number_hidden_layers, output_layer_size
+    ):
         self.layers = []
-        self.layers.append(NeuronLayer(input_layer_size, layer_sizes[0]))
+        self.layers.append(NeuronLayer(input_layer_size, layer_sizes))
         for i in range(number_hidden_layers - 1):
-            self.layers.append(NeuronLayer(layer_sizes[i], layer_sizes[i + 1]))
-        self.layers.append(NeuronLayer(layer_sizes[-1], output_layer_size))
+            self.layers.append(NeuronLayer(layer_sizes, layer_sizes))
+        self.layers.append(NeuronLayer(layer_sizes, output_layer_size))
 
     def forward(self, X):
         output = X
@@ -84,11 +87,14 @@ class MLP:
     def save_weights(self):
         # save weights and biases to file
         for i, layer in enumerate(self.layers):
-            cp.save(f"layer_{i}_weights.npy", layer.weights)
-            cp.save(f"layer_{i}_biases.npy", layer.biases)
-    
+            np.save(f"layer_{i}_weights.npy", layer.weights)
+            np.save(f"layer_{i}_biases.npy", layer.biases)
+
     def load_weights(self):
         # load weights and biases from file
         for i, layer in enumerate(self.layers):
-            layer.weights = cp.load(f"layer_{i}_weights.npy")
-            layer.biases = cp.load(f"layer_{i}_biases.npy")
+            layer.weights = np.load(f"layer_{i}_weights.npy")
+            layer.biases = np.load(f"layer_{i}_biases.npy")
+
+    def predict(self, X):
+        return self.forward(X)

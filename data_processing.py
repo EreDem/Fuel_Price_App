@@ -21,14 +21,23 @@ class DataLoader:
 
     @staticmethod
     def save_data(data: np.array, destination):
-        np.save(destination, data)
+        pd.DataFrame(data).to_csv(destination, index=False)
 
     @staticmethod
     def clean_data(data):
         # remove rows with missing values
         data = data.dropna()
-        # remove rows with prices equal to 0
         data = data.values
+        # remove outliers with 3-sigma rule for the price columns (diesel, e5, e10)
+        for col in [2, 3, 4]:  # price columns are at index 2, 3, 4
+            mean = np.mean(data[:, col])
+            std = np.std(data[:, col])
+            sigma = 0.5
+            data = data[
+                (data[:, col] >= mean - sigma * std)
+                & (data[:, col] <= mean + sigma * std)
+            ]
+        # remove rows with prices equal to 0
         data = data[(data[:, 2] != 0) & (data[:, 3] != 0) & (data[:, 4] != 0)]
         return data
 
@@ -228,7 +237,7 @@ if __name__ == "__main__":
     # shuffle X und y
     # save X and y
 
-    # initialize features and labels
+    # create training features and labels
     X = []
     y = []
 
@@ -246,15 +255,70 @@ if __name__ == "__main__":
 
     # shuffle data set
     indices = np.random.permutation(len(X))
-    X = X[indices]
-    y = y[indices]
-
+    # X and y are lists at this point; use numpy indexing after converting to array
+    X = np.array(X, dtype=object)[indices]
+    y = np.array(y, dtype=object)[indices]
 
     X = np.vstack(X).astype(np.float32)
     y = np.vstack(y).astype(np.float32)
 
-    print(X.shape)
-    print(y.shape)
+    DataLoader.save_data(X, "training_data/training/train_data/features_lables/X.csv")
+    DataLoader.save_data(y, "training_data/training/train_data/features_lables/y.csv")
 
-    DataLoader.save_data(X, "training_data/training/train_data/features_lables/X.npy")
-    DataLoader.save_data(y, "training_data/training/train_data/features_lables/y.npy")
+    # create validation features and labels
+    X_val = []
+    y_val = []
+
+    raw_data_dir = "training_data/raw_data"
+    destination_dir = "training_data/training/train_data/features_lables"
+
+    # the raw training data is stored  in "training_data/raw_data", they are ordered by days
+    # for day in os.listdir(raw_data_dir):
+    # data = DataLoader.load_data(os.path.join(raw_data_dir, day))
+    data = DataLoader.load_data("training_data/raw_data/2026-03-21-prices.csv")
+    clean_data = DataLoader.clean_data(data)
+    labels = FeatureEngineer.extract_labels(clean_data, 3)
+    features = FeatureEngineer.create_feature_matrix(clean_data)
+    X_val.append(features)
+    y_val.append(labels)
+
+    # shuffle data set
+    indices = np.random.permutation(len(X_val))
+    # X and y are lists at this point; use numpy indexing after converting to array
+    X_val = np.array(X_val, dtype=object)[indices]
+    y_val = np.array(y_val, dtype=object)[indices]
+
+    X_val = np.vstack(X_val).astype(np.float32)
+    y_val = np.vstack(y_val).astype(np.float32)
+
+    DataLoader.save_data(X_val, "training_data/training/val_data/X_val.csv")
+    DataLoader.save_data(y_val, "training_data/training/val_data/y_val.csv")
+
+    # create eval features and labels
+    X_eval = []
+    y_eval = []
+
+    raw_data_dir = "training_data/raw_data"
+    destination_dir = "training_data/training/train_data/features_lables"
+
+    # the raw training data is stored  in "training_data/raw_data", they are ordered by days
+    # for day in os.listdir(raw_data_dir):
+    # data = DataLoader.load_data(os.path.join(raw_data_dir, day))
+    data = DataLoader.load_data("training_data/raw_data/2026-03-22-prices.csv")
+    clean_data = DataLoader.clean_data(data)
+    labels = FeatureEngineer.extract_labels(clean_data, 3)
+    features = FeatureEngineer.create_feature_matrix(clean_data)
+    X_eval.append(features)
+    y_eval.append(labels)
+
+    # shuffle data set
+    indices = np.random.permutation(len(X_eval))
+    # X and y are lists at this point; use numpy indexing after converting to array
+    X_eval = np.array(X_eval, dtype=object)[indices]
+    y_eval = np.array(y_eval, dtype=object)[indices]
+
+    X_eval = np.vstack(X_eval).astype(np.float32)
+    y_eval = np.vstack(y_eval).astype(np.float32)
+
+    DataLoader.save_data(X_eval, "training_data/training/eval_data/X_eval.csv")
+    DataLoader.save_data(y_eval, "training_data/training/eval_data/y_eval.csv")
