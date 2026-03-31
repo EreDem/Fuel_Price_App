@@ -1,6 +1,6 @@
 import numpy as np
 from data_processing import DataLoader
-from mlp import MLP, mse
+from model.mlp import MLP, mse
 
 # initialize MLP with 7 input features, 2 hidden layers with 16 neurons each, and 1 output layer
 print("initializing mlp...")

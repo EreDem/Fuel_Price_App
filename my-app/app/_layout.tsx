@@ -2,7 +2,6 @@ import { Tabs } from "expo-router";
 import { SheetProvider } from "react-native-actions-sheet";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Provider as PaperProvider, Portal } from "react-native-paper";
-import { HomeIcon, PredictGraphIcon } from "../assets/svgs";
 import { PredictionsProvider } from "./predictionsContext";
 
 export default function RootLayout() {
@@ -15,26 +14,26 @@ export default function RootLayout() {
               <Tabs
                 screenOptions={{
                   headerShown: true,
-                  headerTitle: "GasSavy",
+                  headerTitle: "Fuel Flash",
                   headerStyle: {
-                    backgroundColor: "#FFFFFF",
+                    backgroundColor: "#1E1E1E",
                     height: 57,
                   },
                   headerTitleStyle: {
                     fontFamily: "Outfit",
                     fontSize: 18,
                     fontWeight: "600",
-                    color: "#171A1FFF",
+                    color: "#FFFFFF",
                   },
                   tabBarStyle: {
                     backgroundColor: "#FFFFFF",
-                    height: 64,
+                    height: 0,
                   },
                   tabBarActiveTintColor: "#C24100FF",
                   tabBarInactiveTintColor: "#888888",
                 }}
               >
-                <Tabs.Screen
+                {/* <Tabs.Screen
                   name="index"
                   options={{
                     title: "Home",
@@ -47,7 +46,7 @@ export default function RootLayout() {
                     title: "predictions",
                     tabBarIcon: ({ color }) => <>{PredictGraphIcon(color)}</>,
                   }}
-                />
+                /> */}
               </Tabs>
             </PredictionsProvider>
           </SheetProvider>

@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
-from mlp import MLP
+from model.mlp import MLP
 from data_processing import DataLoader, FeatureEngineer
 import matplotlib.pyplot as plt
 
