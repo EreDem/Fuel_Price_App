@@ -19,7 +19,7 @@ type Station = {
     diesel?: number | null;
   };
 
-export default function Tempname() {
+export default function Index() {
   const [city, setCity] = useState("");
   const [stationsInCity, setStationsInCity] = useState<Station[]>([]);
   const [query, setQuery] = useState("");
@@ -28,6 +28,9 @@ export default function Tempname() {
   const [bestPrice, setBestPrice] = useState<number | null>(null);
   const [worstPrice, setWorstPrice] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const API_BASE_URL = "https://fuel-flash.onrender.com";
+
 
   const chartData = {
     labels: ["06:00", "09:00", "12:00", "15:00", "18:00", "21:00", "00:00"],
@@ -42,8 +45,7 @@ export default function Tempname() {
   async function getStationInfo(city: string) {
   setLoading(true);
   try {
-    const response = await fetch(`http://127.0.0.1:8000/stations/${city}`);
-
+    const response = await fetch(`${API_BASE_URL}/stations/${city}`);
     if (!response.ok) {
       throw new Error("Network response was not ok");
     }
