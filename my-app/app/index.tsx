@@ -256,15 +256,12 @@ useEffect(() => {
               borderColor: "#2D2D2D",
               borderRadius: 12,
               width: "100%",
-              height: 48,
               justifyContent: "center",
             }}
             inputStyle={{
               fontSize: 16,
               color: "#FFFFFF",
-              height: 48,
               textAlignVertical: "center",
-              paddingBottom: 6,
             }}
             iconColor="#9CA3AF"
             onFocus={() => setShowCityResults(true)}
@@ -281,7 +278,7 @@ useEffect(() => {
             <View
               style={{
                 position: "absolute",
-                top: 54,
+                top: 60,
                 left: 0,
                 right: 0,
                 zIndex: 100,
@@ -336,7 +333,7 @@ useEffect(() => {
           </Text>
         </View>
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <View
             style={{
               position: "relative",
@@ -352,15 +349,12 @@ useEffect(() => {
                 borderColor: "#2D2D2D",
                 borderRadius: 12,
                 width: "100%",
-                height: 48,
                 justifyContent: "center",
               }}
               inputStyle={{
                 fontSize: 16,
                 color: "#FFFFFF",
-                height: 48,
                 textAlignVertical: "center",
-                paddingBottom: 6,
               }}
               iconColor="#9CA3AF"
               onFocus={() => setShowCityResults(true)}
@@ -377,7 +371,7 @@ useEffect(() => {
               <View
                 style={{
                   position: "absolute",
-                  top: 54,
+                  top: 60,
                   left: 0,
                   right: 0,
                   backgroundColor: "#1E1E1E",
