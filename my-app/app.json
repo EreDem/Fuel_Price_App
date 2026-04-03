@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "my-app",
-    "slug": "my-app",
+    "name": "Fuel Flash",
+    "slug": "FuelFlash",
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "myapp",
