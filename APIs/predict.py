@@ -5,7 +5,6 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import requests
-import yfinance as yf
 from APIs.tk_client import get_info_from_station
 from model.mlp import MLP
 import numpy as np
