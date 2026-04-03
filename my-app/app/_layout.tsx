@@ -34,17 +34,15 @@ export default function RootLayout() {
                 }}
               >
                 {/* <Tabs.Screen
-                  name="index"
+                  name="index_outdated"
                   options={{
                     title: "Home",
-                    tabBarIcon: ({ color }) => <>{HomeIcon(color)}</>,
                   }}
                 />
                 <Tabs.Screen
                   name="predictions"
                   options={{
                     title: "predictions",
-                    tabBarIcon: ({ color }) => <>{PredictGraphIcon(color)}</>,
                   }}
                 /> */}
               </Tabs>
