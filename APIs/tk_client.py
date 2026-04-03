@@ -2,12 +2,15 @@ import json
 import os
 import requests
 import dotenv
+from pathlib import Path
 
 dotenv.load_dotenv()  # load environment variables from .env file
 tk_api_key = os.getenv("api_key")
 
+BASE_DIR = Path(__file__).resolve().parent
+file_path = BASE_DIR.parent / "my-app" / "resources" / "stations.json"
 
-with open("my-app\\resources\\stations.json", "r", encoding="utf-8") as f:
+with open(file_path, "r", encoding="utf-8") as f:
     stations = json.load(f)
 
 def get_info_from_station(city):
