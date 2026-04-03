@@ -3,7 +3,7 @@ import { Dimensions, FlatList, Pressable, Text, View } from "react-native";
 import { ScrollView } from "react-native-actions-sheet";
 import { LineChart } from "react-native-chart-kit";
 import { Button, Searchbar } from "react-native-paper";
-import cities from "../resources/cities.json";
+import cities from "../../my-app/resources/cities.json";
 
 const screenWidth = Dimensions.get("window").width;
 const screenHeight = Dimensions.get("window").height;
