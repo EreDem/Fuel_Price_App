@@ -17,14 +17,8 @@ app = FastAPI()
 
 tk_api_key = os.getenv("api_key")
 
-if tk_api_key is None:
-    print("No API key provided – using fallback data")
-    USE_API = False
-else:
-    USE_API = True
-
 # allowed origins for CORS
-origins = ["http://localhost:8081", "http://localhost:8082", "http://127.0.0.1:8081", "http://192.168.0.10:8081"]
+origins = ["http://localhost:8081", "http://localhost:8082", "http://127.0.0.1:8081", "http://192.168.0.10:8081", "http://192.168.178.64:8081"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -33,7 +27,6 @@ app.add_middleware(
     allow_headers=["*"],
     allow_credentials=True,
 )
-
 
 @app.get("/")
 def read_root():

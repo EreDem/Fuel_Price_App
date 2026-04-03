@@ -1,8 +1,8 @@
 fastapi
 uvicorn
+gunicorn
 python-dotenv
 numpy
 pandas
 requests
 cupy
-# yfinance

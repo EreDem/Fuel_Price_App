@@ -7,7 +7,7 @@ dotenv.load_dotenv()  # load environment variables from .env file
 tk_api_key = os.getenv("api_key")
 
 
-with open("my-app\\stations.json", "r", encoding="utf-8") as f:
+with open("my-app\\resources\\stations.json", "r", encoding="utf-8") as f:
     stations = json.load(f)
 
 def get_info_from_station(city):
