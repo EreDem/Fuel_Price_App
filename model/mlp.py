@@ -84,17 +84,17 @@ class MLP:
         for layer in self.layers:
             layer.update(learning_rate)
 
-    def save_weights(self):
+    def save_weights(self, file_path):
         # save weights and biases to file
         for i, layer in enumerate(self.layers):
-            np.save(f"layer_{i}_weights.npy", layer.weights)
-            np.save(f"layer_{i}_biases.npy", layer.biases)
+            np.save(f"{file_path}/layer_{i}_weights.npy", layer.weights)
+            np.save(f"{file_path}/layer_{i}_biases.npy", layer.biases)
 
-    def load_weights(self):
+    def load_weights(self, file_path):
         # load weights and biases from file
         for i, layer in enumerate(self.layers):
-            layer.weights = np.load(f"layer_{i}_weights.npy")
-            layer.biases = np.load(f"layer_{i}_biases.npy")
+            layer.weights = np.load(f"{file_path}/layer_{i}_weights.npy")
+            layer.biases = np.load(f"{file_path}/layer_{i}_biases.npy")
 
     def predict(self, X):
         return self.forward(X)

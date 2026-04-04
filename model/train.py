@@ -1,6 +1,6 @@
 import numpy as np
 from data_processing import DataLoader
-from model.mlp import MLP, mse
+from mlp import MLP, mse
 
 # initialize MLP with 7 input features, 2 hidden layers with 16 neurons each, and 1 output layer
 print("initializing mlp...")
@@ -17,7 +17,7 @@ X_val = DataLoader.load_data("training_data/training/val_data/X_val.csv")
 print("Loading y_val...")
 y_val = DataLoader.load_data("training_data/training/val_data/y_val.csv")
 
-# move arrays to GPU if available; otherwise use NumPy arrays
+
 X = np.asarray(X)
 y = np.asarray(y)
 X_val = np.asarray(X_val)
@@ -58,7 +58,7 @@ for epoch in range(num_epochs):
         best_val_los = val_loss
         val_counter = 0
         # save current best model
-        mlp.save_weights()
+        mlp.save_weights("model/weights/diesel")
     else:
         val_counter += 1
 
