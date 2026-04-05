@@ -1,4 +1,5 @@
 import { Tabs } from "expo-router";
+import { Image } from "react-native";
 import { SheetProvider } from "react-native-actions-sheet";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Provider as PaperProvider, Portal } from "react-native-paper";
@@ -14,37 +15,28 @@ export default function RootLayout() {
               <Tabs
                 screenOptions={{
                   headerShown: true,
-                  headerTitle: "Fuel Flash",
+                  headerTitle: "FUEL SMART",
+                  headerLeft: () => (
+                    <Image
+                      source={require("../assets/icon.png")}
+                      style={{ width: 40, height: 30, marginLeft: 10 }}
+                    />
+                  ),
                   headerStyle: {
-                    backgroundColor: "#1E1E1E",
+                    backgroundColor: "#121212",
                     height: 57,
                   },
                   headerTitleStyle: {
-                    fontFamily: "Outfit",
-                    fontSize: 18,
+                    fontFamily: "Arial",
+                    fontSize: 24,
                     fontWeight: "600",
-                    color: "#FFFFFF",
+                    color: "#FF6B35",
                   },
                   tabBarStyle: {
-                    backgroundColor: "#FFFFFF",
-                    height: 0,
-                  },
-                  tabBarActiveTintColor: "#C24100FF",
-                  tabBarInactiveTintColor: "#888888",
+                  height: 0,
+                  }
                 }}
               >
-                {/* <Tabs.Screen
-                  name="index_outdated"
-                  options={{
-                    title: "Home",
-                  }}
-                />
-                <Tabs.Screen
-                  name="predictions"
-                  options={{
-                    title: "predictions",
-                  }}
-                /> */}
               </Tabs>
             </PredictionsProvider>
           </SheetProvider>

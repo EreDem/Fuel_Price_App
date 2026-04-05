@@ -84,7 +84,7 @@ export default function Index() {
 async function getPredcitions(fuelType: string) {
   setChartLoading(true);
   try {
-    const response = await fetch(`http://127.0.0.1:8000/predict/${fuelType}`);
+    const response = await fetch(`${API_BASE_URL}/predict/${fuelType}`);
 
     if (!response.ok) {
       throw new Error("Network response was not ok");
