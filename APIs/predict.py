@@ -7,6 +7,7 @@ import pandas as pd
 import requests
 from APIs.tk_client import get_info_from_station
 from model.mlp import MLP
+from model.data_processing import FeatureEngineer
 import numpy as np
 import dotenv
 
@@ -27,6 +28,8 @@ app.add_middleware(
     allow_credentials=True,
 )
 
+
+
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
@@ -37,6 +40,23 @@ def get_info(city: str):
     return get_info_from_station(city)
 
 # request for fuel price prediction
-# @app.get("/predict")
-# def predict(fuel_type: str, station_uuid: str):
+@app.get("/predict/{fuel_type}")
+def predict(fuel_type: str):
+    # initialize the model
+    mlp = MLP(7, 16, 2, 1)
+    # load the model weights
+    mlp.load_weights(f"model/weights/{fuel_type}")
+
+    predictions = []
+
+    # make prediction for the next 24 hours
+    current_time = pd.Timestamp.now(tz=zoneinfo.ZoneInfo("Europe/Berlin"))
+    current_time = pd.to_datetime(current_time).tz_localize(None)  # remove timezone information for feature engineering  
+    for i in range(24):
+        X = FeatureEngineer.create_time_features(current_time + pd.Timedelta(hours=i))
+        prediction = mlp.predict(X.reshape(1, -1))[0][0]
+        predictions.append(prediction)
+    
+    return predictions
+        
     

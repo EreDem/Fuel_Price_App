@@ -25,6 +25,9 @@ class DataLoader:
 
     @staticmethod
     def clean_data(data):
+        # parse datetime column and coerce errors to NaT
+        data.iloc[:, 0] = pd.to_datetime(data.iloc[:, 0], errors="coerce", utc=True)
+        data = data.dropna(subset=[data.columns[0]])
         # remove rows with missing values
         data = data.dropna()
         data = data.values
@@ -118,8 +121,10 @@ class FeatureEngineer:
         ]
         holidays = pd.to_datetime(holidays)
 
-        is_holiday = date_column.isin(holidays)
-        is_day_before_holiday = date_column.isin(holidays - pd.Timedelta(days=1))
+        is_holiday = date_column.date() in holidays
+        # is_holiday = date_column.isin(holidays)
+        is_day_before_holiday = date_column.date() in (holidays - pd.Timedelta(days=1))
+        # is_day_before_holiday = date_column.isin(holidays - pd.Timedelta(days=1))
 
         time_features = np.column_stack(
             (
@@ -222,33 +227,22 @@ class FeatureEngineer:
 
 
 if __name__ == "__main__":
-    # workflow
-    # create X and y
-    # START LOOP
-    # create variables features and labels
-    # get data day batch
-    # clean batch
-    # extract labels
-    #   - save in labels
-    # create features
-    #   - save in features
-    # stack features to X and labels to y
-    # END LOOP
-    # shuffle X und y
-    # save X and y
 
     # create training features and labels
     X = []
     y = []
 
     raw_data_dir = "training_data/raw_data"
-    destination_dir = "training_data/training/train_data/features_lables"
 
     # the raw training data is stored  in "training_data/raw_data", they are ordered by days
     for day in os.listdir(raw_data_dir):
+        print(f"Processing day {day}...")
         data = DataLoader.load_data(os.path.join(raw_data_dir, day))
         clean_data = DataLoader.clean_data(data)
-        labels = FeatureEngineer.extract_labels(clean_data, 3)
+        if len(clean_data) == 0:
+            print(f"No valid data for day {day}, skipping...")
+            continue
+        labels = FeatureEngineer.extract_labels(clean_data, 2)
         features = FeatureEngineer.create_feature_matrix(clean_data)
         X.append(features)
         y.append(labels)
@@ -265,60 +259,64 @@ if __name__ == "__main__":
     DataLoader.save_data(X, "training_data/training/train_data/features_lables/X.csv")
     DataLoader.save_data(y, "training_data/training/train_data/features_lables/y.csv")
 
-    # create validation features and labels
-    X_val = []
-    y_val = []
+    # create val features and labels
+    X = []
+    y = []
 
-    raw_data_dir = "training_data/raw_data"
-    destination_dir = "training_data/training/train_data/features_lables"
+    raw_data_dir = "training_data/training/val_data"
 
     # the raw training data is stored  in "training_data/raw_data", they are ordered by days
-    # for day in os.listdir(raw_data_dir):
-    # data = DataLoader.load_data(os.path.join(raw_data_dir, day))
-    data = DataLoader.load_data("training_data/raw_data/2026-03-21-prices.csv")
-    clean_data = DataLoader.clean_data(data)
-    labels = FeatureEngineer.extract_labels(clean_data, 3)
-    features = FeatureEngineer.create_feature_matrix(clean_data)
-    X_val.append(features)
-    y_val.append(labels)
+    for day in os.listdir(raw_data_dir):
+        print(f"Processing day {day}...")
+        data = DataLoader.load_data(os.path.join(raw_data_dir, day))
+        clean_data = DataLoader.clean_data(data)
+        if len(clean_data) == 0:
+            print(f"No valid data for day {day}, skipping...")
+            continue
+        labels = FeatureEngineer.extract_labels(clean_data, 2)
+        features = FeatureEngineer.create_feature_matrix(clean_data)
+        X.append(features)
+        y.append(labels)
 
     # shuffle data set
-    indices = np.random.permutation(len(X_val))
+    indices = np.random.permutation(len(X))
     # X and y are lists at this point; use numpy indexing after converting to array
-    X_val = np.array(X_val, dtype=object)[indices]
-    y_val = np.array(y_val, dtype=object)[indices]
+    X = np.array(X, dtype=object)[indices]
+    y = np.array(y, dtype=object)[indices]
 
-    X_val = np.vstack(X_val).astype(np.float32)
-    y_val = np.vstack(y_val).astype(np.float32)
+    X = np.vstack(X).astype(np.float32)
+    y = np.vstack(y).astype(np.float32)
 
-    DataLoader.save_data(X_val, "training_data/training/val_data/X_val.csv")
-    DataLoader.save_data(y_val, "training_data/training/val_data/y_val.csv")
+    DataLoader.save_data(X, "training_data/training/val_data/X_val.csv")
+    DataLoader.save_data(y, "training_data/training/val_data/y_val.csv")
 
     # create eval features and labels
-    X_eval = []
-    y_eval = []
+    X = []
+    y = []
 
-    raw_data_dir = "training_data/raw_data"
-    destination_dir = "training_data/training/train_data/features_lables"
+    raw_data_dir = "training_data/training/eval_data"
 
     # the raw training data is stored  in "training_data/raw_data", they are ordered by days
-    # for day in os.listdir(raw_data_dir):
-    # data = DataLoader.load_data(os.path.join(raw_data_dir, day))
-    data = DataLoader.load_data("training_data/raw_data/2026-03-22-prices.csv")
-    clean_data = DataLoader.clean_data(data)
-    labels = FeatureEngineer.extract_labels(clean_data, 3)
-    features = FeatureEngineer.create_feature_matrix(clean_data)
-    X_eval.append(features)
-    y_eval.append(labels)
+    for day in os.listdir(raw_data_dir):
+        print(f"Processing day {day}...")
+        data = DataLoader.load_data(os.path.join(raw_data_dir, day))
+        clean_data = DataLoader.clean_data(data)
+        if len(clean_data) == 0:
+            print(f"No valid data for day {day}, skipping...")
+            continue
+        labels = FeatureEngineer.extract_labels(clean_data, 2)
+        features = FeatureEngineer.create_feature_matrix(clean_data)
+        X.append(features)
+        y.append(labels)
 
     # shuffle data set
-    indices = np.random.permutation(len(X_eval))
+    indices = np.random.permutation(len(X))
     # X and y are lists at this point; use numpy indexing after converting to array
-    X_eval = np.array(X_eval, dtype=object)[indices]
-    y_eval = np.array(y_eval, dtype=object)[indices]
+    X = np.array(X, dtype=object)[indices]
+    y = np.array(y, dtype=object)[indices]
 
-    X_eval = np.vstack(X_eval).astype(np.float32)
-    y_eval = np.vstack(y_eval).astype(np.float32)
+    X = np.vstack(X).astype(np.float32)
+    y = np.vstack(y).astype(np.float32)
 
-    DataLoader.save_data(X_eval, "training_data/training/eval_data/X_eval.csv")
-    DataLoader.save_data(y_eval, "training_data/training/eval_data/y_eval.csv")
+    DataLoader.save_data(X, "training_data/training/eval_data/X_eval.csv")
+    DataLoader.save_data(y, "training_data/training/eval_data/y_eval.csv")
