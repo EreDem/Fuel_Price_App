@@ -3,7 +3,6 @@ import { Image } from "react-native";
 import { SheetProvider } from "react-native-actions-sheet";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Provider as PaperProvider, Portal } from "react-native-paper";
-import { PredictionsProvider } from "./predictionsContext";
 
 export default function RootLayout() {
   return (
@@ -11,7 +10,6 @@ export default function RootLayout() {
       <PaperProvider>
         <Portal.Host>
           <SheetProvider>
-            <PredictionsProvider>
               <Tabs
                 screenOptions={{
                   headerShown: true,
@@ -38,7 +36,6 @@ export default function RootLayout() {
                 }}
               >
               </Tabs>
-            </PredictionsProvider>
           </SheetProvider>
         </Portal.Host>
       </PaperProvider>

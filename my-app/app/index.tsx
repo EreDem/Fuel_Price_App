@@ -37,15 +37,15 @@ export default function Index() {
 
   const chartData = {
     // get current time and add 24 hours and format it as "HH:00"
-    labels: Array.from({ length: 8 }, (_, i) => {
+    labels: Array.from({ length: 12 }, (_, i) => {
       const date = new Date();
-      date.setHours(date.getHours() + 3*i);
+      date.setHours(date.getHours() + 2*i);
       return `${date.getHours()}:00`;
     }),
     datasets: [
       {
         // only use every 3rd prediction to not have too many points in the chart
-        data: predictions.filter((_, index) => index % 2 === 0),
+        data: predictions.filter((_, index) => index % 1 === 0),
         // data: predictions,
         strokeWidth: 3,
       },

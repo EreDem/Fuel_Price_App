@@ -18,7 +18,7 @@ app = FastAPI()
 tk_api_key = os.getenv("api_key")
 
 # allowed origins for CORS
-origins = ["http://localhost:8081", "http://localhost:8082", "http://127.0.0.1:8081", "http://192.168.0.10:8081", "http://192.168.178.64:8081"]
+origins = ["http://localhost:8081", "http://localhost:8082", "http://127.0.0.1:8081", "http://192.168.0.10:8081", "http://192.168.178.64:8081", "https://fuelsmart.expo.app/"]
 
 app.add_middleware(
     CORSMiddleware,
