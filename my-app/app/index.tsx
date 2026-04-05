@@ -23,17 +23,27 @@ export default function Tempname() {
   const [city, setCity] = useState("");
   const [stationsInCity, setStationsInCity] = useState<Station[]>([]);
   const [query, setQuery] = useState("");
-  const [fuelType, setFuelType] = useState("Super E5");
+  const [fuelType, setFuelType] = useState("e5");
   const [showCityResults, setShowCityResults] = useState(false);
   const [bestPrice, setBestPrice] = useState<number | null>(null);
   const [worstPrice, setWorstPrice] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [chartLoading, setChartLoading] = useState(false);
+  const [predictions, setPredictions] = useState<number[]>([]);
+  const [bestTime, setBestTime] = useState<number | null>(null);
 
   const chartData = {
-    labels: ["06:00", "09:00", "12:00", "15:00", "18:00", "21:00", "00:00"],
+    // get current time and add 24 hours and format it as "HH:00"
+    labels: Array.from({ length: 8 }, (_, i) => {
+      const date = new Date();
+      date.setHours(date.getHours() + 3*i);
+      return `${date.getHours()}:00`;
+    }),
     datasets: [
       {
-        data: [1.58, 1.62, 1.6, 1.54, 1.53, 1.59, 1.61],
+        // only use every 3rd prediction to not have too many points in the chart
+        data: predictions.filter((_, index) => index % 2 === 0),
+        // data: predictions,
         strokeWidth: 3,
       },
     ],
@@ -49,11 +59,6 @@ export default function Tempname() {
     }
 
     const data = await response.json();
-    console.log("raw data:", data);
-
-    if (!Array.isArray(data)) {
-      throw new Error("API response is not an array");
-    }
 
     const stationData: Station[] = data.map((station: any) => ({
       id: station.id,
@@ -66,12 +71,38 @@ export default function Tempname() {
       house_number: station.house_number,
     }));
 
-    console.log("mapped stationData:", stationData);
     setStationsInCity(stationData);
   } catch (error) {
     console.error(error);
   } finally {
     setLoading(false);
+  }
+}
+
+async function getPredcitions(fuelType: string) {
+  setChartLoading(true);
+  try {
+    const response = await fetch(`http://127.0.0.1:8000/predict/${fuelType}`);
+
+    if (!response.ok) {
+      throw new Error("Network response was not ok");
+    }
+
+    const predictions = await response.json();
+
+    setPredictions(predictions);
+
+    const minPrice = Math.min(...predictions);
+    const minIndex = predictions.indexOf(minPrice);
+
+  const date = new Date();
+  date.setHours(date.getHours() + minIndex);
+
+  setBestTime(date.getHours());
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setChartLoading(false);
   }
 }
 
@@ -90,22 +121,6 @@ function getBestWorstPrice(stations: Station[], fuelType: string) {
   setWorstPrice(Math.max(...prices));
 }
 
-
-// get the best/ worst price from stationsInCity when stationsInCity or fuelType changes
-useEffect(() => {
-  getBestWorstPrice(stationsInCity, fuelType);
-}, [stationsInCity, fuelType]);
-
-
-  // get stations in city when city changes
-  useEffect(() => {
-    async function fetchStations() {
-      getStationInfo(city);
-    }
-    if (city) {
-      fetchStations();
-    }
-  }, [city]);
 
   const cityResults = useMemo(() => {
     const trimmed = query.trim().toLowerCase();
@@ -227,6 +242,31 @@ useEffect(() => {
       </View>
     );
   };
+
+  
+// get the best/ worst price from stationsInCity when stationsInCity or fuelType changes
+useEffect(() => {
+  getBestWorstPrice(stationsInCity, fuelType);
+}, [stationsInCity, fuelType]);
+
+useEffect(() => {
+  async function fetchPredictions() {
+      getPredcitions(fuelType);
+    }
+    if (fuelType) {
+      fetchPredictions();
+    }
+}, [fuelType]);
+
+  // get stations in city when city changes
+  useEffect(() => {
+    async function fetchStations() {
+      getStationInfo(city);
+    }
+    if (city) {
+      fetchStations();
+    }
+  }, [city]);
 
   return (
     <View
@@ -425,7 +465,7 @@ useEffect(() => {
             <Button
               style={{
                 backgroundColor:
-                  fuelType === "Super E5" ? "#FF6B35" : "#1E1E1E",
+                  fuelType === "e5" ? "#FF6B35" : "#1E1E1E",
                 borderRadius: 16,
               }}
               contentStyle={{
@@ -436,8 +476,8 @@ useEffect(() => {
                 fontSize: 14,
                 marginVertical: 0,
               }}
-              textColor={fuelType === "Super E5" ? "#FFFFFF" : "#6B7280"}
-              onPress={() => setFuelType("Super E5")}
+              textColor={fuelType === "e5" ? "#FFFFFF" : "#6B7280"}
+              onPress={() => setFuelType("e5")}
             >
               Super E5
             </Button>
@@ -445,7 +485,7 @@ useEffect(() => {
             <Button
               style={{
                 backgroundColor:
-                  fuelType === "Super E10" ? "#FF6B35" : "#1E1E1E",
+                  fuelType === "e10" ? "#FF6B35" : "#1E1E1E",
                 borderRadius: 16,
               }}
               contentStyle={{
@@ -456,15 +496,15 @@ useEffect(() => {
                 fontSize: 14,
                 marginVertical: 0,
               }}
-              textColor={fuelType === "Super E10" ? "#FFFFFF" : "#6B7280"}
-              onPress={() => setFuelType("Super E10")}
+              textColor={fuelType === "e10" ? "#FFFFFF" : "#6B7280"}
+              onPress={() => setFuelType("e10")}
             >
               Super E10
             </Button>
 
             <Button
               style={{
-                backgroundColor: fuelType === "Diesel" ? "#FF6B35" : "#1E1E1E",
+                backgroundColor: fuelType === "diesel" ? "#FF6B35" : "#1E1E1E",
                 borderRadius: 16,
               }}
               contentStyle={{
@@ -475,8 +515,8 @@ useEffect(() => {
                 fontSize: 14,
                 marginVertical: 0,
               }}
-              textColor={fuelType === "Diesel" ? "#FFFFFF" : "#6B7280"}
-              onPress={() => setFuelType("Diesel")}
+              textColor={fuelType === "diesel" ? "#FFFFFF" : "#6B7280"}
+              onPress={() => setFuelType("diesel")}
             >
               Diesel
             </Button>
@@ -560,7 +600,7 @@ useEffect(() => {
                   fontWeight: "700",
                 }}
               >
-                18
+                {bestTime != null ? `${bestTime}:00` : "--:--"}
               </Text>
               <Text
                 style={{
@@ -595,19 +635,32 @@ useEffect(() => {
             >
               Preisprognose ({fuelType})
             </Text>
-
-            <LineChart
-              data={chartData}
-              width={screenWidth - 40}
-              height={220}
-              withDots={true}
+            {chartLoading ? (
+              <View style={{
+                width: screenWidth - 40,
+                height: 220,
+                justifyContent: "center",
+                alignItems: "center",
+              }}>
+              <Text
+                style={{ color: "#9CA3AF", fontSize: 16 }}
+              >
+                Lade Preisprognose...
+              </Text>
+              </View>
+            ) : (
+              <LineChart
+                data={chartData}
+                width={screenWidth - 40}
+                height={220}
+                withDots={true}
               withInnerLines={true}
               withOuterLines={false}
               withShadow={true}
               withVerticalLines={false}
               yAxisSuffix="€"
               fromZero={false}
-              bezier
+              bezier={true}
               chartConfig={{
                 backgroundColor: "#1E1E1E",
                 backgroundGradientFrom: "#1E1E1E",
@@ -631,9 +684,9 @@ useEffect(() => {
               style={{
                 borderRadius: 16,
               }}
-            />
+            />)}
           </View>
-
+            
           <Text
             style={{
               color: "#FFFFFF",

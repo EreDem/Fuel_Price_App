@@ -121,8 +121,10 @@ class FeatureEngineer:
         ]
         holidays = pd.to_datetime(holidays)
 
-        is_holiday = date_column.isin(holidays)
-        is_day_before_holiday = date_column.isin(holidays - pd.Timedelta(days=1))
+        is_holiday = date_column.date() in holidays
+        # is_holiday = date_column.isin(holidays)
+        is_day_before_holiday = date_column.date() in (holidays - pd.Timedelta(days=1))
+        # is_day_before_holiday = date_column.isin(holidays - pd.Timedelta(days=1))
 
         time_features = np.column_stack(
             (
