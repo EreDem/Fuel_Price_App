@@ -52,8 +52,8 @@ def predict(fuel_type: str):
     # make prediction for the next 24 hours
     current_time = pd.Timestamp.now(tz=zoneinfo.ZoneInfo("Europe/Berlin"))
     current_time = pd.to_datetime(current_time).tz_localize(None)  # remove timezone information for feature engineering  
-    for i in range(8):
-        X = FeatureEngineer.create_time_features(current_time + pd.Timedelta(hours=i*3))
+    for i in range(24):
+        X = FeatureEngineer.create_time_features(current_time + pd.Timedelta(hours=i))
         prediction = mlp.predict(X.reshape(1, -1))[0][0]
         predictions.append(prediction)
     
