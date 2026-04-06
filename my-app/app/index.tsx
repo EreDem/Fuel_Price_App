@@ -114,9 +114,10 @@ export default function Index() {
         : fuelType === "e10"
           ? "e10"
           : "diesel";
+    // price could be null or false, filter those out and then get the min and max price
     const prices = stations
       .map((station) => station[fuelKey])
-      .filter((price): price is number => price != null);
+      .filter((price): price is number => typeof price === "number");
     if (prices.length === 0) return null;
     setBestPrice(Math.min(...prices));
     setWorstPrice(Math.max(...prices));
