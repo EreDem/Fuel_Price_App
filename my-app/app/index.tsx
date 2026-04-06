@@ -659,8 +659,6 @@ export default function Index() {
                 withOuterLines={false}
                 withShadow={true}
                 withVerticalLines={false}
-                yAxisLabel=""
-                yAxisSuffix=""
                 formatYLabel={() => ""}
                 fromZero={false}
                 bezier={true}
@@ -687,6 +685,7 @@ export default function Index() {
                 }}
                 style={{
                   borderRadius: 16,
+                  paddingRight: 15,
                 }}
               />
             )}
