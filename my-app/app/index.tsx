@@ -5,8 +5,8 @@ import { LineChart } from "react-native-chart-kit";
 import { Button, Searchbar } from "react-native-paper";
 import cities from "../../my-app/resources/cities.json";
 
-const screenWidth = Dimensions.get("window").width;
-const screenHeight = Dimensions.get("window").height;
+const screenWidth = Dimensions.get('window').width;
+const screenHeight = Dimensions.get('window').height;
 
 type Station = {
     id: string;
@@ -37,15 +37,14 @@ export default function Index() {
 
   const chartData = {
     // get current time and add 24 hours and format it as "HH:00"
-    labels: Array.from({ length: 12 }, (_, i) => {
+    labels: Array.from({ length: 8 }, (_, i) => {
       const date = new Date();
-      date.setHours(date.getHours() + 2*i);
+      date.setHours(date.getHours() + 3*i);
       return `${date.getHours()}:00`;
     }),
     datasets: [
       {
-        // only use every 3rd prediction to not have too many points in the chart
-        data: predictions.filter((_, index) => index % 1 === 0),
+        data: predictions,
         // data: predictions,
         strokeWidth: 3,
       },
@@ -285,6 +284,7 @@ useEffect(() => {
           style={{
             position: "relative",
             zIndex: 50,
+            flexGrow: 1
           }}
         >
           <Searchbar
@@ -373,7 +373,7 @@ useEffect(() => {
           </Text>
         </View>
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ flexGrow: 1 }}>
           <View
             style={{
               position: "relative",

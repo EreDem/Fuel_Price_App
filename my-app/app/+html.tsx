@@ -5,6 +5,7 @@ export default function Root({ children }: PropsWithChildren) {
   return (
     <html lang="de">
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="theme-color" content="#ffffff" />
