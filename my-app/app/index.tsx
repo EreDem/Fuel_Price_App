@@ -70,6 +70,7 @@ export default function Index() {
         street: station.street,
         house_number: station.house_number,
       }));
+      console.log(stationData);
 
       setStationsInCity(stationData);
     } catch (error) {
@@ -108,9 +109,9 @@ export default function Index() {
 
   function getBestWorstPrice(stations: Station[], fuelType: string) {
     const fuelKey: "e5" | "e10" | "diesel" =
-      fuelType === "Super E5"
+      fuelType === "e5"
         ? "e5"
-        : fuelType === "Super E10"
+        : fuelType === "e10"
           ? "e10"
           : "diesel";
     const prices = stations
@@ -138,9 +139,9 @@ export default function Index() {
 
   const renderItem = ({ item, index }: { item: Station; index: number }) => {
     const fuelKey: "e5" | "e10" | "diesel" =
-      fuelType === "Super E5"
+      fuelType === "e5"
         ? "e5"
-        : fuelType === "Super E10"
+        : fuelType === "e10"
           ? "e10"
           : "diesel";
     const fuelPrice = item[fuelKey];
@@ -546,7 +547,7 @@ export default function Index() {
                   marginBottom: 6,
                 }}
               >
-                Günstigster in
+                Günstigster Preis in
               </Text>
               <Text
                 style={{
@@ -555,7 +556,7 @@ export default function Index() {
                   marginBottom: 6,
                 }}
               >
-                {city}
+                {city}:
               </Text>
 
               <Text
@@ -591,7 +592,7 @@ export default function Index() {
                   marginBottom: 6,
                 }}
               >
-                Günstigste Uhrzeit
+                Optimale Tankzeit:
               </Text>
 
               <Text
