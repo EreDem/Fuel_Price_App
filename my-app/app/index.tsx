@@ -5,19 +5,19 @@ import { LineChart } from "react-native-chart-kit";
 import { Button, Searchbar } from "react-native-paper";
 import cities from "../../my-app/resources/cities.json";
 
-const screenWidth = Dimensions.get('window').width;
-const screenHeight = Dimensions.get('window').height;
+const screenWidth = Dimensions.get("window").width;
+const screenHeight = Dimensions.get("window").height;
 
 type Station = {
-    id: string;
-    brand?: string | null;
-    street?: string | null;
-    house_number?: string | null;
-    status?: string | null;
-    e5?: number | null;
-    e10?: number | null;
-    diesel?: number | null;
-  };
+  id: string;
+  brand?: string | null;
+  street?: string | null;
+  house_number?: string | null;
+  status?: string | null;
+  e5?: number | null;
+  e10?: number | null;
+  diesel?: number | null;
+};
 
 export default function Index() {
   const [city, setCity] = useState("");
@@ -34,12 +34,11 @@ export default function Index() {
 
   const API_BASE_URL = "https://fuel-flash.onrender.com";
 
-
   const chartData = {
     // get current time and add 24 hours and format it as "HH:00"
     labels: Array.from({ length: 8 }, (_, i) => {
       const date = new Date();
-      date.setHours(date.getHours() + 3*i);
+      date.setHours(date.getHours() + 3 * i);
       return `${date.getHours()}:00`;
     }),
     datasets: [
@@ -52,76 +51,75 @@ export default function Index() {
   };
 
   async function getStationInfo(city: string) {
-  setLoading(true);
-  try {
-    const response = await fetch(`${API_BASE_URL}/stations/${city}`);
-    if (!response.ok) {
-      throw new Error("Network response was not ok");
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/stations/${city}`);
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      const data = await response.json();
+
+      const stationData: Station[] = data.map((station: any) => ({
+        id: station.id,
+        brand: station.brand,
+        e5: station.e5,
+        e10: station.e10,
+        diesel: station.diesel,
+        status: station.status,
+        street: station.street,
+        house_number: station.house_number,
+      }));
+
+      setStationsInCity(stationData);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
-
-    const data = await response.json();
-
-    const stationData: Station[] = data.map((station: any) => ({
-      id: station.id,
-      brand: station.brand,
-      e5: station.e5,
-      e10: station.e10,
-      diesel: station.diesel,
-      status: station.status,
-      street: station.street,
-      house_number: station.house_number,
-    }));
-
-    setStationsInCity(stationData);
-  } catch (error) {
-    console.error(error);
-  } finally {
-    setLoading(false);
   }
-}
 
-async function getPredcitions(fuelType: string) {
-  setChartLoading(true);
-  try {
-    const response = await fetch(`${API_BASE_URL}/predict/${fuelType}`);
+  async function getPredcitions(fuelType: string) {
+    setChartLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/predict/${fuelType}`);
 
-    if (!response.ok) {
-      throw new Error("Network response was not ok");
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      const predictions = await response.json();
+
+      setPredictions(predictions);
+
+      const minPrice = Math.min(...predictions);
+      const minIndex = predictions.indexOf(minPrice);
+
+      const date = new Date();
+      date.setHours(date.getHours() + minIndex);
+
+      setBestTime(date.getHours());
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setChartLoading(false);
     }
-
-    const predictions = await response.json();
-
-    setPredictions(predictions);
-
-    const minPrice = Math.min(...predictions);
-    const minIndex = predictions.indexOf(minPrice);
-
-  const date = new Date();
-  date.setHours(date.getHours() + minIndex);
-
-  setBestTime(date.getHours());
-  } catch (error) {
-    console.error(error);
-  } finally {
-    setChartLoading(false);
   }
-}
 
-function getBestWorstPrice(stations: Station[], fuelType: string) {
-  const fuelKey: "e5" | "e10" | "diesel" =
-    fuelType === "Super E5"
-      ? "e5"
-      : fuelType === "Super E10"
-      ? "e10"
-      : "diesel";
-  const prices = stations
-    .map((station) => station[fuelKey])
-    .filter((price): price is number => price != null);
-  if (prices.length === 0) return null;
-  setBestPrice(Math.min(...prices));
-  setWorstPrice(Math.max(...prices));
-}
-
+  function getBestWorstPrice(stations: Station[], fuelType: string) {
+    const fuelKey: "e5" | "e10" | "diesel" =
+      fuelType === "Super E5"
+        ? "e5"
+        : fuelType === "Super E10"
+          ? "e10"
+          : "diesel";
+    const prices = stations
+      .map((station) => station[fuelKey])
+      .filter((price): price is number => price != null);
+    if (prices.length === 0) return null;
+    setBestPrice(Math.min(...prices));
+    setWorstPrice(Math.max(...prices));
+  }
 
   const cityResults = useMemo(() => {
     const trimmed = query.trim().toLowerCase();
@@ -138,14 +136,13 @@ function getBestWorstPrice(stations: Station[], fuelType: string) {
       .slice(0, 8);
   }, [query]);
 
-
   const renderItem = ({ item, index }: { item: Station; index: number }) => {
     const fuelKey: "e5" | "e10" | "diesel" =
       fuelType === "Super E5"
         ? "e5"
         : fuelType === "Super E10"
-        ? "e10"
-        : "diesel";
+          ? "e10"
+          : "diesel";
     const fuelPrice = item[fuelKey];
     const fuelPriceText =
       fuelPrice != null ? fuelPrice.toFixed(2).replace(".", ",") : "--,--";
@@ -157,7 +154,12 @@ function getBestWorstPrice(stations: Station[], fuelType: string) {
           borderRadius: 16,
           borderWidth: 2,
           borderLeftWidth: 5,
-          borderColor: fuelPrice === bestPrice ? "#2ECC71" : fuelPrice === worstPrice ? "#E74C3C" : "#27272A",
+          borderColor:
+            fuelPrice === bestPrice
+              ? "#2ECC71"
+              : fuelPrice === worstPrice
+                ? "#E74C3C"
+                : "#27272A",
           paddingHorizontal: 16,
           paddingVertical: 14,
           marginBottom: 10,
@@ -207,12 +209,12 @@ function getBestWorstPrice(stations: Station[], fuelType: string) {
 
             <Text
               style={{
-                color: item.status === "open"  ? "#2ECC71" : "#E74C3C",
+                color: item.status === "open" ? "#2ECC71" : "#E74C3C",
                 fontSize: 13,
                 fontWeight: "600",
               }}
             >
-              {item.status === "open"  ? "Geöffnet" : "Geschlossen"}
+              {item.status === "open" ? "Geöffnet" : "Geschlossen"}
             </Text>
           </View>
         </View>
@@ -235,29 +237,28 @@ function getBestWorstPrice(stations: Station[], fuelType: string) {
                 color: "#FFFFFF",
                 lineHeight: 14,
               }}
-            >€/L
+            >
+              €/L
             </Text>
           </Text>
-
         </View>
       </View>
     );
   };
 
-  
-// get the best/ worst price from stationsInCity when stationsInCity or fuelType changes
-useEffect(() => {
-  getBestWorstPrice(stationsInCity, fuelType);
-}, [stationsInCity, fuelType]);
+  // get the best/ worst price from stationsInCity when stationsInCity or fuelType changes
+  useEffect(() => {
+    getBestWorstPrice(stationsInCity, fuelType);
+  }, [stationsInCity, fuelType]);
 
-useEffect(() => {
-  async function fetchPredictions() {
+  useEffect(() => {
+    async function fetchPredictions() {
       getPredcitions(fuelType);
     }
     if (fuelType) {
       fetchPredictions();
     }
-}, [fuelType]);
+  }, [fuelType]);
 
   // get stations in city when city changes
   useEffect(() => {
@@ -284,7 +285,7 @@ useEffect(() => {
           style={{
             position: "relative",
             zIndex: 50,
-            flexGrow: 1
+            flexGrow: 1,
           }}
         >
           <Searchbar
@@ -373,7 +374,11 @@ useEffect(() => {
           </Text>
         </View>
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ flexGrow: 1 }}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          style={{ flexGrow: 1 }}
+        >
           <View
             style={{
               position: "relative",
@@ -460,8 +465,7 @@ useEffect(() => {
           >
             <Button
               style={{
-                backgroundColor:
-                  fuelType === "e5" ? "#FF6B35" : "#1E1E1E",
+                backgroundColor: fuelType === "e5" ? "#FF6B35" : "#1E1E1E",
                 borderRadius: 16,
               }}
               contentStyle={{
@@ -480,8 +484,7 @@ useEffect(() => {
 
             <Button
               style={{
-                backgroundColor:
-                  fuelType === "e10" ? "#FF6B35" : "#1E1E1E",
+                backgroundColor: fuelType === "e10" ? "#FF6B35" : "#1E1E1E",
                 borderRadius: 16,
               }}
               contentStyle={{
@@ -562,7 +565,9 @@ useEffect(() => {
                   fontWeight: "700",
                 }}
               >
-                {bestPrice != null ? bestPrice.toFixed(2).replace(".", ",") : "--,--"}
+                {bestPrice != null
+                  ? bestPrice.toFixed(2).replace(".", ",")
+                  : "--,--"}
                 <Text style={{ fontSize: 16, fontWeight: "600" }}>€/L</Text>
               </Text>
             </View>
@@ -632,17 +637,17 @@ useEffect(() => {
               Preisprognose ({fuelType})
             </Text>
             {chartLoading ? (
-              <View style={{
-                width: screenWidth - 40,
-                height: 220,
-                justifyContent: "center",
-                alignItems: "center",
-              }}>
-              <Text
-                style={{ color: "#9CA3AF", fontSize: 16 }}
+              <View
+                style={{
+                  width: screenWidth - 40,
+                  height: 220,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
               >
-                Lade Preisprognose...
-              </Text>
+                <Text style={{ color: "#9CA3AF", fontSize: 16 }}>
+                  Lade Preisprognose...
+                </Text>
               </View>
             ) : (
               <LineChart
@@ -650,39 +655,43 @@ useEffect(() => {
                 width={screenWidth - 40}
                 height={220}
                 withDots={true}
-              withInnerLines={true}
-              withOuterLines={false}
-              withShadow={true}
-              withVerticalLines={false}
-              yAxisSuffix="€"
-              fromZero={false}
-              bezier={true}
-              chartConfig={{
-                backgroundColor: "#1E1E1E",
-                backgroundGradientFrom: "#1E1E1E",
-                backgroundGradientTo: "#1E1E1E",
-                decimalPlaces: 2,
-                color: (opacity = 1) => `rgba(255, 107, 53, ${opacity})`,
-                labelColor: (opacity = 1) => `rgba(156, 163, 175, ${opacity})`,
-                propsForDots: {
-                  r: "4",
-                  strokeWidth: "2",
-                  stroke: "#FF6B35",
-                  fill: "#121212",
-                },
-                propsForBackgroundLines: {
-                  stroke: "#2D2D2D",
-                  strokeDasharray: "",
-                },
-                fillShadowGradient: "#FF6B35",
-                fillShadowGradientOpacity: 0.18,
-              }}
-              style={{
-                borderRadius: 16,
-              }}
-            />)}
+                withInnerLines={true}
+                withOuterLines={false}
+                withShadow={true}
+                withVerticalLines={false}
+                yAxisLabel=""
+                yAxisSuffix=""
+                formatYLabel={() => ""}
+                fromZero={false}
+                bezier={true}
+                chartConfig={{
+                  backgroundColor: "#1E1E1E",
+                  backgroundGradientFrom: "#1E1E1E",
+                  backgroundGradientTo: "#1E1E1E",
+                  decimalPlaces: 2,
+                  color: (opacity = 1) => `rgba(255, 107, 53, ${opacity})`,
+                  labelColor: (opacity = 1) =>
+                    `rgba(156, 163, 175, ${opacity})`,
+                  propsForDots: {
+                    r: "4",
+                    strokeWidth: "2",
+                    stroke: "#FF6B35",
+                    fill: "#121212",
+                  },
+                  propsForBackgroundLines: {
+                    stroke: "#2D2D2D",
+                    strokeDasharray: "",
+                  },
+                  fillShadowGradient: "#FF6B35",
+                  fillShadowGradientOpacity: 0.18,
+                }}
+                style={{
+                  borderRadius: 16,
+                }}
+              />
+            )}
           </View>
-            
+
           <Text
             style={{
               color: "#FFFFFF",
