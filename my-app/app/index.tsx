@@ -146,7 +146,7 @@ export default function Index() {
           : "diesel";
     const fuelPrice = item[fuelKey];
     const fuelPriceText =
-      fuelPrice != null ? fuelPrice.toFixed(2).replace(".", ",") : "--,--";
+      typeof fuelPrice === "number" ? fuelPrice.toFixed(2).replace(".", ",") : "--,--";
 
     return (
       <View
