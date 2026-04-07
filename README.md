@@ -1,6 +1,8 @@
-# Fuel Price App
+# Fuel Smart
 
-Fuel Price App is a mobile application prototype for predicting fuel prices based on historical and contextual data.
+🚀 **Live Demo:** https://fuelsmart.expo.app
+
+Fuel Smart is a mobile application prototype for predicting fuel prices based on historical and contextual data.
 
 The project combines a custom-built neural network, a FastAPI backend, and a React Native frontend into a single end-to-end system.
 
@@ -8,24 +10,31 @@ The project combines a custom-built neural network, a FastAPI backend, and a Rea
 
 ## Current Status
 
-**Work in progress**
+**Almost complete – deployed prototype**
 
-- The full system architecture (frontend → backend → model) is implemented and running
-- The prediction pipeline is integrated end-to-end
-- Due to missing trained weights and the use of placeholder data, current predictions are not meaningful
+- The full system (frontend → backend → model) is implemented and **live**
+- The app is accessible online and fully functional from a system perspective
+- End-to-end prediction pipeline is working
 
-The focus of the project is on building a complete machine learning application pipeline. Model performance and training are currently being improved.
+⚠️ **Current bottleneck:**  
+The model is not yet properly trained, resulting in poor prediction quality.
+
+The current development focus is on:
+
+- Improving data quality
+- Training the neural network properly
+- Optimizing model performance
 
 ---
 
 ## Features
 
 - Mobile UI built with React Native / Expo
-- Backend API using FastAPI
-- Custom Multi-Layer Perceptron (MLP) implemented from scratch (NumPy)
-- Data preprocessing and feature handling
-- End-to-end integration of UI, backend, and model
-- Fallback mechanisms for missing data (demo-ready setup)
+- FastAPI backend serving predictions via REST API
+- Custom Multi-Layer Perceptron (MLP) implemented from scratch using NumPy
+- End-to-end ML pipeline (data → preprocessing → prediction → UI)
+- Modular architecture for easy model iteration
+- Online deployment (accessible prototype)
 
 ---
 
@@ -42,25 +51,7 @@ flowchart LR
 
 ## Limitations
 
-- The current model does not produce meaningful predictions due to missing trained weights
-- Placeholder (dummy) data is used to keep the system runnable
-- The project is a prototype and not production-ready
-
-## How to Run
-
-### Clone Repository, Install Dependencies and Start Backend
-
-```bash
-git clone https://github.com/EreDem/Fuel_Price_App.git
-cd Fuel_Price_App
-pip install -r requirements.txt
-uvicorn API:app --reload
-```
-
-### Start Frontend
-
-```bash
-cd Fuel_Price_App/my-app
-npm install
-npx expo start
-```
+- The model currently performs poorly due to insufficient / ineffective training
+- Predictions are not yet reliable for real-world use
+- Data quality and feature engineering still need improvement
+- The project is still a prototype and not production-ready

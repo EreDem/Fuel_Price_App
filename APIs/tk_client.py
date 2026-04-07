@@ -14,7 +14,6 @@ with open(file_path, "r", encoding="utf-8") as f:
     stations = json.load(f)
 
 def get_info_from_station(city):
-    print("requesting from tk...")
     # get all stations in city
     stations_in_city = [s for s in stations if s.get("city") and s["city"].strip().lower() == city.strip().lower()]
     # get all ids of stations in city
@@ -43,5 +42,4 @@ def get_info_from_station(city):
                 })
         else:
             print(f"Error fetching data from TK API: {response.status_code}")
-    print(station_info)
     return station_info

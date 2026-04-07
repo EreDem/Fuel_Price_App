@@ -36,7 +36,6 @@ def read_root():
 
 @app.get("/stations/{city}")
 def get_info(city: str):
-    print(f"API called for city: {city}")
     return get_info_from_station(city)
 
 # request for fuel price prediction
@@ -52,9 +51,10 @@ def predict(fuel_type: str):
     # make prediction for the next 24 hours
     current_time = pd.Timestamp.now(tz=zoneinfo.ZoneInfo("Europe/Berlin"))
     current_time = pd.to_datetime(current_time).tz_localize(None)  # remove timezone information for feature engineering  
-    for i in range(24):
-        X = FeatureEngineer.create_time_features(current_time + pd.Timedelta(hours=i))
+    for i in range(6):
+        X = FeatureEngineer.create_time_features(current_time + pd.Timedelta(hours=i*4))
         prediction = mlp.predict(X.reshape(1, -1))[0][0]
+        print("time:", current_time + pd.Timedelta(hours=i*4), "Predicted price:", prediction)
         predictions.append(prediction)
     
     return predictions

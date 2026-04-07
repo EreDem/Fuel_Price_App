@@ -4,9 +4,7 @@ import { ScrollView } from "react-native-actions-sheet";
 import { LineChart } from "react-native-chart-kit";
 import { Button, Searchbar } from "react-native-paper";
 import cities from "../../my-app/resources/cities.json";
-import stations from "../../my-app/resources/stations.json";
 
-let s = stations;
 
 const screenWidth = Dimensions.get("window").width;
 const screenHeight = Dimensions.get("window").height;
@@ -35,15 +33,15 @@ export default function Index() {
   const [predictions, setPredictions] = useState<number[]>([]);
   const [bestTime, setBestTime] = useState<number | null>(null);
 
-  // const API_BASE_URL = "https://fuel-flash.onrender.com";
+  const API_BASE_URL = "https://fuel-flash.onrender.com";
   // for local testing
-  const API_BASE_URL = "http://127.0.0.1:8000";
+  // const API_BASE_URL = "http://127.0.0.1:8000";
 
   const chartData = {
     // get current time and add 24 hours and format it as "HH:00"
-    labels: Array.from({ length: 8 }, (_, i) => {
+    labels: Array.from({ length: 6 }, (_, i) => {
       const date = new Date();
-      date.setHours(date.getHours() + 3 * i);
+      date.setHours(date.getHours() + 4 * i);
       return `${date.getHours()}:00`;
     }),
     datasets: [
@@ -97,11 +95,14 @@ export default function Index() {
 
       setPredictions(predictions);
 
+      console.log("Received predictions:", predictions);
+
       const minPrice = Math.min(...predictions);
       const minIndex = predictions.indexOf(minPrice);
 
       const date = new Date();
-      date.setHours(date.getHours() + minIndex);
+      // predictions are for every 4 hours, so multiply index with 4 to get the hours to add
+      date.setHours(date.getHours() + minIndex*4);
 
       setBestTime(date.getHours());
     } catch (error) {
@@ -667,7 +668,7 @@ export default function Index() {
                 withOuterLines={false}
                 withShadow={true}
                 withVerticalLines={false}
-                formatYLabel={() => ""}
+                yAxisSuffix="€"
                 fromZero={false}
                 bezier={true}
                 chartConfig={{
@@ -693,7 +694,6 @@ export default function Index() {
                 }}
                 style={{
                   borderRadius: 16,
-                  paddingRight: 15,
                 }}
               />
             )}
