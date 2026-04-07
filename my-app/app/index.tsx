@@ -4,6 +4,9 @@ import { ScrollView } from "react-native-actions-sheet";
 import { LineChart } from "react-native-chart-kit";
 import { Button, Searchbar } from "react-native-paper";
 import cities from "../../my-app/resources/cities.json";
+import stations from "../../my-app/resources/stations.json";
+
+let s = stations;
 
 const screenWidth = Dimensions.get("window").width;
 const screenHeight = Dimensions.get("window").height;
@@ -32,7 +35,9 @@ export default function Index() {
   const [predictions, setPredictions] = useState<number[]>([]);
   const [bestTime, setBestTime] = useState<number | null>(null);
 
-  const API_BASE_URL = "https://fuel-flash.onrender.com";
+  // const API_BASE_URL = "https://fuel-flash.onrender.com";
+  // for local testing
+  const API_BASE_URL = "http://127.0.0.1:8000";
 
   const chartData = {
     // get current time and add 24 hours and format it as "HH:00"
@@ -44,7 +49,6 @@ export default function Index() {
     datasets: [
       {
         data: predictions,
-        // data: predictions,
         strokeWidth: 3,
       },
     ],
@@ -131,9 +135,9 @@ export default function Index() {
     return cities
       .filter((item) => {
         const cityMatch = item.city.toLowerCase().startsWith(trimmed);
-        const plzMatch = item.plz.some((code) => code.startsWith(trimmed));
+        const zipMatch = item.zip_codes.some((code) => code.startsWith(trimmed));
 
-        return cityMatch || plzMatch;
+        return cityMatch || zipMatch;
       })
       .slice(0, 8);
   }, [query]);
@@ -148,6 +152,8 @@ export default function Index() {
     const fuelPrice = item[fuelKey];
     const fuelPriceText =
       typeof fuelPrice === "number" ? fuelPrice.toFixed(2).replace(".", ",") : "--,--";
+
+    if (item.brand === "Unknown") return null;
 
     return (
       <View
