@@ -239,7 +239,7 @@ class FeatureEngineer:
         # shape [data, 7 + 1 + 1 + 1 + 6] = [data, 16] , add self.create_brand_one_hot(self.data[:, 1]), self.create_price_lag_features(24), self.create_price_min_24h_features(), , self.create_price_lag_features(1)
         return FeatureEngineer.assemble_matrix(
             FeatureEngineer.create_time_features(data[:, 0]),
-            FeatureEngineer.create_average_price_feature(data, fuel_type),
+            # FeatureEngineer.create_average_price_feature(data, fuel_type),
         )
 
 
@@ -250,7 +250,7 @@ if __name__ == "__main__":
     y = []
 
     # lables for 2: diesel, 3: e5, 4: e10
-    fuel_type = 2
+    fuel_type = 4
 
     raw_data_dir = "training_data/raw_data/training"
 
@@ -270,8 +270,8 @@ if __name__ == "__main__":
     # shuffle data set
     indices = np.random.permutation(len(X))
     # X and y are lists at this point; use numpy indexing after converting to array
-    X = np.array(X, dtype=object)[indices]
-    y = np.array(y, dtype=object)[indices]
+    # X = np.array(X, dtype=object)[indices]
+    # y = np.array(y, dtype=object)[indices]
 
     X = np.vstack(X).astype(np.float32)
     y = np.vstack(y).astype(np.float32)
@@ -301,7 +301,7 @@ if __name__ == "__main__":
     # shuffle data set
     indices = np.random.permutation(len(X))
     # X and y are lists at this point; use numpy indexing after converting to array
-    X = np.array(X, dtype=object)[indices]
+    # X = np.array(X, dtype=object)[indices]
     y = np.array(y, dtype=object)[indices]
 
     X = np.vstack(X).astype(np.float32)
@@ -332,8 +332,8 @@ if __name__ == "__main__":
     # shuffle data set
     indices = np.random.permutation(len(X))
     # X and y are lists at this point; use numpy indexing after converting to array
-    X = np.array(X, dtype=object)[indices]
-    y = np.array(y, dtype=object)[indices]
+    # X = np.array(X, dtype=object)[indices]
+    # y = np.array(y, dtype=object)[indices]
 
     X = np.vstack(X).astype(np.float32)
     y = np.vstack(y).astype(np.float32)

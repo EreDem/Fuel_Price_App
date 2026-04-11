@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 # initialize MLP
 mlp = MLP(7, 16, 2, 1)
-mlp.load_weights("model/weights/diesel2")
+mlp.load_weights("model/weights/e10")
 
 # load eval data
 X = DataLoader.load_data("training_data/features_and_lables/eval_data/X_eval.csv")

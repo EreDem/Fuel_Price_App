@@ -29,18 +29,18 @@ y_val = np.asarray(y_val)
 # training parameters
 learning_rate = 0.001
 batch_size = 1024
-num_epochs = 100
+num_epochs = 1000
 val_counter = 0
-patience = 5
+patience = 15
 best_val_los = float("inf")
 
 print("starting training...")
 for epoch in range(num_epochs):
     print(f"Training in epoch {epoch}")
     # shuffle data set
-    indices = np.random.permutation(len(X))
-    X = X[indices]
-    y = y[indices]
+    # indices = np.random.permutation(len(X))
+    # X = X[indices]
+    # y = y[indices]
 
     for i in range(0, len(X), batch_size):
         X_batch = X[i : i + batch_size]
@@ -64,7 +64,7 @@ for epoch in range(num_epochs):
         best_val_los = val_loss
         val_counter = 0
         # save current best model
-        mlp.save_weights("model/weights/diesel2")
+        mlp.save_weights("model/weights/e10")
     else:
         val_counter += 1
 
