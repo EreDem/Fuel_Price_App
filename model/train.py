@@ -2,21 +2,24 @@ import numpy as np
 from data_processing import DataLoader
 from mlp import MLP, mse
 
-# initialize MLP with 7 input features, 2 hidden layers with 16 neurons each, and 1 output layer
+# initialize MLP with 7 input features, 4 hidden layers with 16 neurons each, and 1 output layer
 print("initializing mlp...")
 mlp = MLP(7, 16, 2, 1)
 
 # Load training data
 print("Loading X...")
-X = DataLoader.load_data("training_data/training/train_data/features_lables/X.csv")
+X = DataLoader.load_data("training_data/features_and_lables/train_data/X.csv")
 print("Loading y...")
-y = DataLoader.load_data("training_data/training/train_data/features_lables/y.csv")
+y = DataLoader.load_data("training_data/features_and_lables/train_data/y.csv")
+
+print(X.shape, y.shape)
 
 print("Loading X_val...")
-X_val = DataLoader.load_data("training_data/training/val_data/X_val.csv")
+X_val = DataLoader.load_data("training_data/features_and_lables/val_data/X_val.csv")
 print("Loading y_val...")
-y_val = DataLoader.load_data("training_data/training/val_data/y_val.csv")
+y_val = DataLoader.load_data("training_data/features_and_lables/val_data/y_val.csv")
 
+print(X_val.shape, y_val.shape)
 
 X = np.asarray(X)
 y = np.asarray(y)
@@ -28,7 +31,7 @@ learning_rate = 0.001
 batch_size = 1024
 num_epochs = 100
 val_counter = 0
-patience = 3
+patience = 5
 best_val_los = float("inf")
 
 print("starting training...")
@@ -48,7 +51,10 @@ for epoch in range(num_epochs):
         mlp.update(learning_rate)
 
     print("current epoch training loss:", mse(y_batch, y_pred))
+    # mae loss
+    print("current epoch training MAE:", np.mean(np.abs(y_batch - y_pred)))
     print("current epoch validation loss:", mse(y_val, mlp.forward(X_val)))
+    print("current epoch validation MAE:", np.mean(np.abs(y_val - mlp.forward(X_val))))
 
     # validate
     val_pred = mlp.forward(X_val)
@@ -58,7 +64,7 @@ for epoch in range(num_epochs):
         best_val_los = val_loss
         val_counter = 0
         # save current best model
-        mlp.save_weights("model/weights/diesel")
+        mlp.save_weights("model/weights/diesel2")
     else:
         val_counter += 1
 

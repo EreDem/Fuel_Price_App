@@ -121,10 +121,10 @@ class FeatureEngineer:
         ]
         holidays = pd.to_datetime(holidays)
 
-        is_holiday = date_column.date() in holidays
-        # is_holiday = date_column.isin(holidays)
-        is_day_before_holiday = date_column.date() in (holidays - pd.Timedelta(days=1))
-        # is_day_before_holiday = date_column.isin(holidays - pd.Timedelta(days=1))
+        # is_holiday = date_column.date() in holidays
+        is_holiday = date_column.isin(holidays)
+        # is_day_before_holiday = date_column.date() in (holidays - pd.Timedelta(days=1))
+        is_day_before_holiday = date_column.isin(holidays - pd.Timedelta(days=1))
 
         time_features = np.column_stack(
             (
@@ -140,30 +140,46 @@ class FeatureEngineer:
         # shape [data, 7]
         return time_features
 
-    def create_price_lag_features(self, lag_hours):
-        timestamps = pd.to_datetime(self.data[:, 0]).floor(
-            "h"
-        )  # round down to the nearest hour to get one price per hour
-        uuids = self.data[:, 1]
-        prices = self.data[:, 3]  # e5 price is at index 3
+    @staticmethod
+    def create_average_price_feature(data, fuel_type):
+        last_price_column = []
+        stations = pd.read_csv("training_data/misc/stations.csv")
+        print(stations["city"].isna().sum())
 
-        price_lookup = {
-            (uuid, time): price for uuid, time, price in zip(uuids, timestamps, prices)
-        }
+        data_times = pd.to_datetime(data[:, 0]).floor("h")
+        data_uuids = data[:, 1]
 
-        time_delta = pd.Timedelta(hours=lag_hours)
+        uuid_to_city = stations.set_index("uuid")["city"].to_dict()
+        city_to_uuids = stations.groupby("city")["uuid"].apply(list).to_dict()
 
-        price_lag_column = np.zeros(len(self.data))
+        for row in data:
+            station_uuid = row[1]
+            current_time = pd.to_datetime(row[0]).floor("h")
 
-        for i in range(len(self.data)):
-            target_time = timestamps[i] - time_delta
-            current_uuid = uuids[i]
-            price_lag_column[i] = price_lookup.get(
-                (current_uuid, target_time), prices[i]
+            city = uuid_to_city.get(station_uuid, np.nan)
+
+            if pd.isna(city):
+                last_price_column.append(np.nan)
+                continue
+
+            station_uuids_in_city = city_to_uuids.get(city, [])
+
+            if len(station_uuids_in_city) == 0:
+                last_price_column.append(np.nan)
+                continue
+
+            mask = np.isin(data_uuids, station_uuids_in_city) & (
+                data_times == (current_time - pd.Timedelta(hours=1))
             )
 
-        # shape [data, 1]
-        return price_lag_column
+            city_prices_last_hour = data[mask, fuel_type].astype(float)
+
+            if len(city_prices_last_hour) == 0:
+                last_price_column.append(np.nan)
+            else:
+                last_price_column.append(np.mean(city_prices_last_hour))
+
+        return np.array(last_price_column)
 
     def create_price_min_24h_features(self):
         timestamps = pd.to_datetime(self.data[:, 0]).floor(
@@ -219,10 +235,11 @@ class FeatureEngineer:
         return np.column_stack(columns)
 
     @staticmethod
-    def create_feature_matrix(data):
+    def create_feature_matrix(data, fuel_type):
         # shape [data, 7 + 1 + 1 + 1 + 6] = [data, 16] , add self.create_brand_one_hot(self.data[:, 1]), self.create_price_lag_features(24), self.create_price_min_24h_features(), , self.create_price_lag_features(1)
         return FeatureEngineer.assemble_matrix(
-            FeatureEngineer.create_time_features(data[:, 0])
+            FeatureEngineer.create_time_features(data[:, 0]),
+            FeatureEngineer.create_average_price_feature(data, fuel_type),
         )
 
 
@@ -232,7 +249,10 @@ if __name__ == "__main__":
     X = []
     y = []
 
-    raw_data_dir = "training_data/raw_data"
+    # lables for 2: diesel, 3: e5, 4: e10
+    fuel_type = 2
+
+    raw_data_dir = "training_data/raw_data/training"
 
     # the raw training data is stored  in "training_data/raw_data", they are ordered by days
     for day in os.listdir(raw_data_dir):
@@ -242,8 +262,8 @@ if __name__ == "__main__":
         if len(clean_data) == 0:
             print(f"No valid data for day {day}, skipping...")
             continue
-        labels = FeatureEngineer.extract_labels(clean_data, 2)
-        features = FeatureEngineer.create_feature_matrix(clean_data)
+        labels = FeatureEngineer.extract_labels(clean_data, fuel_type)
+        features = FeatureEngineer.create_feature_matrix(clean_data, fuel_type)
         X.append(features)
         y.append(labels)
 
@@ -256,14 +276,14 @@ if __name__ == "__main__":
     X = np.vstack(X).astype(np.float32)
     y = np.vstack(y).astype(np.float32)
 
-    DataLoader.save_data(X, "training_data/training/train_data/features_lables/X.csv")
-    DataLoader.save_data(y, "training_data/training/train_data/features_lables/y.csv")
+    DataLoader.save_data(X, "training_data/features_and_lables/train_data/X.csv")
+    DataLoader.save_data(y, "training_data/features_and_lables/train_data/y.csv")
 
     # create val features and labels
     X = []
     y = []
 
-    raw_data_dir = "training_data/training/val_data"
+    raw_data_dir = "training_data/raw_data/validation"
 
     # the raw training data is stored  in "training_data/raw_data", they are ordered by days
     for day in os.listdir(raw_data_dir):
@@ -273,8 +293,8 @@ if __name__ == "__main__":
         if len(clean_data) == 0:
             print(f"No valid data for day {day}, skipping...")
             continue
-        labels = FeatureEngineer.extract_labels(clean_data, 2)
-        features = FeatureEngineer.create_feature_matrix(clean_data)
+        labels = FeatureEngineer.extract_labels(clean_data, fuel_type)
+        features = FeatureEngineer.create_feature_matrix(clean_data, fuel_type)
         X.append(features)
         y.append(labels)
 
@@ -287,14 +307,14 @@ if __name__ == "__main__":
     X = np.vstack(X).astype(np.float32)
     y = np.vstack(y).astype(np.float32)
 
-    DataLoader.save_data(X, "training_data/training/val_data/X_val.csv")
-    DataLoader.save_data(y, "training_data/training/val_data/y_val.csv")
+    DataLoader.save_data(X, "training_data/features_and_lables/val_data/X_val.csv")
+    DataLoader.save_data(y, "training_data/features_and_lables/val_data/y_val.csv")
 
     # create eval features and labels
     X = []
     y = []
 
-    raw_data_dir = "training_data/training/eval_data"
+    raw_data_dir = "training_data/raw_data/evaluation"
 
     # the raw training data is stored  in "training_data/raw_data", they are ordered by days
     for day in os.listdir(raw_data_dir):
@@ -304,8 +324,8 @@ if __name__ == "__main__":
         if len(clean_data) == 0:
             print(f"No valid data for day {day}, skipping...")
             continue
-        labels = FeatureEngineer.extract_labels(clean_data, 2)
-        features = FeatureEngineer.create_feature_matrix(clean_data)
+        labels = FeatureEngineer.extract_labels(clean_data, fuel_type)
+        features = FeatureEngineer.create_feature_matrix(clean_data, fuel_type)
         X.append(features)
         y.append(labels)
 
@@ -318,5 +338,5 @@ if __name__ == "__main__":
     X = np.vstack(X).astype(np.float32)
     y = np.vstack(y).astype(np.float32)
 
-    DataLoader.save_data(X, "training_data/training/eval_data/X_eval.csv")
-    DataLoader.save_data(y, "training_data/training/eval_data/y_eval.csv")
+    DataLoader.save_data(X, "training_data/features_and_lables/eval_data/X_eval.csv")
+    DataLoader.save_data(y, "training_data/features_and_lables/eval_data/y_eval.csv")
